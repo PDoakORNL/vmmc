@@ -11,6 +11,14 @@ demos/python/square_wellium
 demos/python/lennard_jonesium
 demos/python/patchy_disc
 demos/python/demo/*.pyc
+demos/lennard_jonesium.dSYM/
+demos/patchy_disc.dSYM/
+demos/python/lennard_jonesium.dSYM/
+demos/python/patchy_disc.dSYM/
+demos/python/square_wellium.dSYM/
+demos/square_wellium.dSYM/
+demos/square_wellium_spherocylinder
+demos/square_wellium_spherocylinder.dSYM/
 .compiler_flags
 .check_python
 trajectory.xyz

@@ -18,30 +18,15 @@
 
 ############################### MACROS ########################################
 
-define colorecho
-	@tput setaf $1
-	@echo $2
-	@tput sgr0
-endef
-
-define boldcolorecho
-	@tput bold
-	@tput setaf $1
-	@echo $2
-	@tput sgr0
-endef
-
-define inlinecolorecho
-	tput setaf $1; echo $2; tput sgr0
-endef
+# the coloring caused me trouble in emacs and isn't good for echo to file either
+colorecho = @echo "$2"
+boldcolorecho = @echo "$2"
+inlinecolorecho = @echo "$2"
 
 ############################## VARIABLES ######################################
 
 # Set shell to bash.
 SHELL := bash
-
-# Suppress display of executed commands.
-.SILENT:
 
 # Default goal will print the help message.
 .DEFAULT_GOAL := help
@@ -50,10 +35,10 @@ SHELL := bash
 project := vmmc
 
 # C++ compiler.
-CXX := g++
+CXX := g++-5
 
 # Installation path.
-PREFIX ?= /usr/local
+PREFIX := $HOME/local
 
 # Path for source files.
 src_dir := src
@@ -98,10 +83,13 @@ iflags := -m 0644
 commit := $(shell git describe --abbrev=4 --dirty --always --tags)
 
 # Python header file.
-python_header := $(shell locate Python.h | grep 2.7 | head -n 1 | awk -F "/Python.h" '{print $$1}')
+# assumes use of locate and one python, unlikely for developers
+# python_header := $(shell locate Python.h | grep 2.7 | head -n 1 | awk -F "/Python.h" '{print $1}')
+python_header := ${VIRTUAL_ENV}/include/python2.7
 
 # Python library.
-python_library := $(shell locate libpython2.7 | head -n 1)
+#python_library := $(shell locate libpython2.7 | head -n 1)
+python_library := /usr/local/Cellar/python/2.7.10/Frameworks/Python.framework/Versions/2.7/lib/libpython2.7.dylib
 
 # C++ compiler flags for development build.
 cxxflags_devel := -O0 -std=c++11 -g -Wall -Isrc -DCOMMIT=\"$(commit)\" $(OPTFLAGS)
@@ -136,16 +124,16 @@ python_sources := $(wildcard $(demo_dir)/python/demo/*.py)
 # Doxygen files.
 dox_files := $(wildcard dox/*.dox)
 
-############################### TARGETS #######################################
+# ############################### TARGETS #######################################
 
 # Print help message.
 .PHONY: help
 help:
-	$(call boldcolorecho, 4, "About")
+	$(call boldcolorecho,4,"About")
 	@echo " This Makefile can be used to build the $(project) library along with its"
 	@echo " associated demos and documentation."
 	@echo
-	$(call boldcolorecho, 4, "Targets")
+	$(call boldcolorecho,4,"Targets")
 	@echo " help       -->  print this help message"
 	@echo " build      -->  build library and demos (default=release)"
 	@echo " devel      -->  build using development compiler flags (debug)"
@@ -156,7 +144,7 @@ help:
 	@echo " install    -->  install library, demos, and documentation"
 	@echo " uninstall  -->  uninstall library, demos, and documentation"
 	@echo
-	$(call boldcolorecho, 4, "Tips")
+	$(call boldcolorecho,4,"Tips")
 	@echo " To set a different installation path run"
 	@echo "     PREFIX=path make install"
 	@echo
@@ -194,15 +182,16 @@ devel release:
 	@echo "Python found." | cmp -s - $@ || \
 	if [ "$(python_header)" = "" ] || [ "$(python_library)" = "" ] ; then \
         echo "Python not found."; \
-        exit 1; \
+	exit 1; \
 	else echo "Python found."; \
 	fi > $@
+
 
 # Compile VMMC object files.
 # Autodepenencies are handled using a recipe taken from
 # http://scottmcpeak.com/autodepend/autodepend.html
 $(obj_dir)/%.o: $(src_dir)/%.cpp .compiler_flags
-	$(call colorecho, 2, "--> Building CXX object $*.o")
+	@echo "--> Building CXX object $*.o"
 	$(CXX) $(CXXFLAGS) -c -o $(obj_dir)/$*.o $(src_dir)/$*.cpp
 	$(CXX) -MM $(CXXFLAGS) $(src_dir)/$*.cpp > $*.d
 	@mv -f $*.d $*.d.tmp
@@ -215,7 +204,7 @@ $(obj_dir)/%.o: $(src_dir)/%.cpp .compiler_flags
 # Autodepenencies are handled using a recipe taken from
 # http://scottmcpeak.com/autodepend/autodepend.html
 $(demo_obj_dir)/%.o: $(demo_dir)/src/%.cpp .compiler_flags
-	$(call colorecho, 2, "--> Building CXX object $*.o")
+	$(call echo "--> Building CXX object $*.o")
 	$(CXX) $(CXXFLAGS) -c -o $(demo_obj_dir)/$*.o $(demo_dir)/src/$*.cpp
 	$(CXX) -MM $(CXXFLAGS) $(demo_dir)/src/$*.cpp > $*.d
 	@mv -f $*.d $*.d.tmp
@@ -226,7 +215,7 @@ $(demo_obj_dir)/%.o: $(demo_dir)/src/%.cpp .compiler_flags
 
 # Build the library and demos.
 .PHONY: build
-build: $(obj_dir) $(demo_obj_dir) $(library) $(demo_library_header) $(demo_library) $(demos) $(python_demos)
+build: $(obj_dir) $(demo_obj_dir) $(library) $(demo_library) $(demo_library_header) $(demos) $(python_demos)
 
 # Create output directory for object and dependency files.
 $(obj_dir):
@@ -238,7 +227,7 @@ $(demo_obj_dir):
 
 # Create demo library header file.
 $(demo_library_header): $(demo_headers)
-	$(call colorecho, 4, "--> Generating CXX library header $(demo_library_header)")
+	$(call colorecho,4, "--> Generating CXX library header $(demo_library_header)")
 	@echo -e "#ifndef _DEMO_H\n#define _DEMO_H\n" > $(demo_library_header)
 	@for i in $(demo_headers);                  \
 		do h=`echo $$i | cut -d '/' -f 3`;      \
@@ -248,16 +237,16 @@ $(demo_library_header): $(demo_headers)
 
 # Build the static library.
 $(library): $(objects)
-	$(call colorecho, 1, "--> Linking CXX static library $(library)")
+	$(call colorecho,1,"--> Linking CXX static library $(library)")
 	mkdir -p $(lib_dir)
-	ar rcs $@ $(objects)
+	ar -rcs $@ $(objects)
 	ranlib $@
 
 # Build the static demo library.
 $(demo_library): $(demo_objects)
 	$(call colorecho, 1, "--> Linking CXX static library $(demo_library)")
 	mkdir -p $(demo_lib_dir)
-	ar rcs $@ $(demo_objects)
+	ar -rcs $@ $(demo_objects)
 	ranlib $@
 
 # Compile demonstration code.
@@ -308,9 +297,10 @@ uninstall:
 # Clean up object and dependecy files.
 .PHONY: clean
 clean:
-	$(call colorecho, 6, "--> Cleaning CXX object and dependency files")
+	$(call colorecho,6,"--> Cleaning CXX object and dependency files")
 	rm -rf $(obj_dir)
 	rm -rf $(demo_obj_dir)
+	rm -rf $(demo_library_header)
 
 # Clean up everything produced by make.
 .PHONY: clobber
@@ -327,21 +317,3 @@ clobber:
 	rm -f $(demo_dir)/python/demo/*.pyc
 	rm -f .compiler_flags
 	rm -f .check_python
-
-.PHONY: sandwich
-sandwich:
-	if [ "$$(id -u)" != "0" ]; then                        \
-		echo " What? Make it yourself."                   ;\
-	else                                                   \
-		echo "                      ____"                 ;\
-		echo "          .----------'    '-."              ;\
-		echo "         /  .      '     .   \\"            ;\
-		echo "        /        '    .      /|"            ;\
-		echo "       /      .             \ /"            ;\
-		echo "      /  ' .       .     .  || |"           ;\
-		echo "     /.___________    '    / //"            ;\
-		echo "     |._          '------'| /|"             ;\
-		echo "     '.............______.-' /"             ;\
-		echo "     |-.                  | /"              ;\
-		echo "     \`\"\"\"\"\"\"\"\"\"\"\"\"\"-.....-'"  ;\
-	fi;                                                    \
