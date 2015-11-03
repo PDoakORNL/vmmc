@@ -126,7 +126,26 @@ namespace vmmc
     typedef std::function<void (unsigned int, double[])> PostMoveCallback;
 #endif
 
-//! Check custom boundary condition.
+    //! Calculate the non-pairwise energy felt by a particle.
+    /*! \param index
+            The particle index.
+
+        \param position
+            The position of the particle following.
+
+        \param orientation
+            The orientation of the particle.
+
+        \return
+            The total non-pairwise energy felt by the particle.
+    */
+#ifndef ISOTROPIC
+    typedef std::function<double (unsigned int, double[], double[])> NonPairwiseCallback;
+#else
+    typedef std::function<double (unsigned int, double[])> NonPairwiseCallback;
+#endif
+
+    //! Check custom boundary condition.
     /*! \param index
             The particle index.
 
@@ -175,7 +194,7 @@ namespace vmmc
         unsigned int posFrustated;                  //!< Index in the frustrated links array.
         std::vector<double> preMovePosition;        //!< Particle position before the virtual move.
         std::vector<double> postMovePosition;       //!< Particle position following the virtual move.
-        std::vector<double> pseudoPosition;         //!< Position of the particle in the pseudo-cluster.
+        std::vector<double> clusterPosition;        //!< Position of the particle in the moving cluster (relative to seed).
 #ifndef ISOTROPIC
         std::vector<double> preMoveOrientation;     //!< Particle orientation before the virtual move.
         std::vector<double> postMoveOrientation;    //!< Particle orientation following the virtual move.
@@ -189,9 +208,11 @@ namespace vmmc
         PairEnergyCallback pairEnergyCallback;      //!< Callback function to calculate pair energies.
         InteractionsCallback interactionsCallback;  //!< Callback function to determine particle interactions.
         PostMoveCallback postMoveCallback;          //!< Callback function to apply any post-move updates.
-        BoundaryCallback boundaryCallback;          //!< Callback function to apply any post-move updates.
+        NonPairwiseCallback nonPairwiseCallback;    //!< Callback function to calculate non-pairwise interaction energies.
+        BoundaryCallback boundaryCallback;          //!< Callback function to apply custom boundary conditions.
 
-        bool isCustomBoundary;                      //!< Whether the boundary callback function is defined.
+        bool isNonPairwise;                         //!< Whether the non-pairwise energy callback is defined.
+        bool isCustomBoundary;                      //!< Whether the boundary callback is defined.
     };
 
     //! Main VMMC class.
@@ -352,7 +373,7 @@ namespace vmmc
         //! Determine whether move is accepted.
         bool accept();
 
-        //! Compute the hydrodynamic radius of the pseudo-cluster.
+        //! Compute the hydrodynamic radius of the moving cluster.
         double computeHydrodynamicRadius() const;
 
         //! Compute particle's position and orientation following the trial move.

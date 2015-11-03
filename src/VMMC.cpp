@@ -26,7 +26,7 @@ namespace vmmc
         // Resize position/orientation vectors.
         preMovePosition.resize(dimension);
         postMovePosition.resize(dimension);
-        pseudoPosition.resize(dimension);
+        clusterPosition.resize(dimension);
 #ifndef ISOTROPIC
         preMoveOrientation.resize(dimension);
         postMoveOrientation.resize(dimension);
@@ -96,7 +96,7 @@ namespace vmmc
             // Resize vectors.
             particles[i].preMovePosition.resize(dimension);
             particles[i].postMovePosition.resize(dimension);
-            particles[i].pseudoPosition.resize(dimension);
+            particles[i].clusterPosition.resize(dimension);
 #ifndef ISOTROPIC
             particles[i].preMoveOrientation.resize(dimension);
             particles[i].postMoveOrientation.resize(dimension);
@@ -135,6 +135,10 @@ namespace vmmc
             for (unsigned int i=0;i<nParticles;i++)
                 pairEnergyMatrix[i].resize(i);
         }
+
+        // Check for non-pairwise energy callback function.
+        if (callbacks.nonPairwiseCallback == nullptr) callbacks.isNonPairwise = false;
+        else callbacks.isNonPairwise = true;
 
         // Check for custom boundary callback function.
         if (callbacks.boundaryCallback == nullptr) callbacks.isCustomBoundary = false;
@@ -184,7 +188,7 @@ namespace vmmc
         // Reset early exit flag.
         isEarlyExit = false;
 
-        // Propose a move for the new pseudocluster.
+        // Propose a move for the cluster.
         proposeMove();
 
         // Move hasn't been aborted.
@@ -338,7 +342,7 @@ namespace vmmc
         if (!isEarlyExit)
         {
             // Initialise the seed particle.
-            particles[moveParams.seed].pseudoPosition = particles[moveParams.seed].preMovePosition;
+            particles[moveParams.seed].clusterPosition = particles[moveParams.seed].preMovePosition;
             initiateParticle(moveParams.seed, particles[moveParams.seed]);
 
             // Check that trial move of seed hasn't triggered early exit condition.
@@ -401,7 +405,7 @@ namespace vmmc
             unsigned int nPairs;
             unsigned int pairInteractions[maxInteractions];
 
-            // Check all particles in the pseudo-cluster.
+            // Check all particles in the moving cluster.
             for (unsigned int i=0;i<nMoving;i++)
             {
                 // Get a list of pair interactions.
@@ -450,12 +454,41 @@ namespace vmmc
             }
         }
 
+        // Check for non-pairwise energy contributions.
+        if (callbacks.isNonPairwise)
+        {
+            // Check all particles in the moving cluster.
+            for (unsigned int i=0;i<nMoving;i++)
+            {
+#ifndef ISOTROPIC
+                excessEnergy -= callbacks.nonPairwiseCallback(moveList[i], &particles[moveList[i]].preMovePosition[0],
+                    &particles[moveList[i]].preMoveOrientation[0]);
+#else
+                excessEnergy += callbacks.nonPairwiseCallback(moveList[i], &particles[moveList[i]].preMovePosition[0]);
+#endif
+            }
+        }
+
         // Apply the move.
         swapMoveStatus();
 
         // Check for overlaps (or finite repulsions).
         for (unsigned int i=0;i<nMoving;i++)
         {
+            // Check for non-pairwise energy contributions.
+            if (callbacks.isNonPairwise)
+            {
+#ifndef ISOTROPIC
+                excessEnergy += callbacks.nonPairwiseCallback(moveList[i], &particles[moveList[i]].preMovePosition[0],
+                    &particles[moveList[i]].preMoveOrientation[0]);
+#else
+                excessEnergy += callbacks.nonPairwiseCallback(moveList[i], &particles[moveList[i]].preMovePosition[0]);
+#endif
+
+                // Early exit for large non-pairwise energies.
+                if (excessEnergy > 1e6) return false;
+            }
+
             if (!isRepusive)
             {
 #ifndef ISOTROPIC
@@ -494,8 +527,7 @@ namespace vmmc
 #endif
 
                     // Early exit test for hard core overlaps and large finite energy repulsions.
-                    if (energy > 1e6)
-                        return false;
+                    if (energy > 1e6) return false;
 
                     x = moveList[i];
                     y = pairInteractions[j];
@@ -515,7 +547,7 @@ namespace vmmc
                     }
                     else
                     {
-                        // Neigbour isn't part of the pseudo-cluster.
+                        // Neigbour isn't part of the moving cluster.
                         if (!particles[pairInteractions[j]].isMoving)
                         {
                             // Particles no longer interact.
@@ -533,12 +565,12 @@ namespace vmmc
             }
         }
 
-        if (isRepusive)
+        if (isRepusive || callbacks.isNonPairwise)
         {
             if (rng() > exp(-excessEnergy)) return false;
         }
 
-        // Move succesful.
+        // Move successful.
         return true;
     }
 
@@ -555,7 +587,7 @@ namespace vmmc
             for (unsigned int i=0;i<nMoving;i++)
             {
                 for (unsigned int j=0;j<dimension;j++)
-                    centerOfMass[j] += particles[moveList[i]].pseudoPosition[j];
+                    centerOfMass[j] += particles[moveList[i]].clusterPosition[j];
             }
         }
 
@@ -565,12 +597,12 @@ namespace vmmc
             if (!moveParams.isRotation)
             {
                 for (unsigned int j=0;j<dimension;j++)
-                    delta[j] = particles[moveList[i]].pseudoPosition[j] - centerOfMass[j] / (double) nMoving;
+                    delta[j] = particles[moveList[i]].clusterPosition[j] - centerOfMass[j] / (double) nMoving;
             }
             else
             {
                 for (unsigned int j=0;j<dimension;j++)
-                    delta[j] = particles[moveList[i]].pseudoPosition[j] - particles[moveParams.seed].preMovePosition[j];
+                    delta[j] = particles[moveList[i]].clusterPosition[j] - particles[moveParams.seed].preMovePosition[j];
             }
 
             double a1 = delta[0]*moveParams.trialVector[1] - delta[1]*moveParams.trialVector[0];
@@ -615,7 +647,7 @@ namespace vmmc
 
             // Calculate coordinates relative to the global rotation point.
             for (unsigned int i=0;i<dimension;i++)
-                v1[i] = particles[particle].pseudoPosition[i] - particles[moveParams.seed].pseudoPosition[i];
+                v1[i] = particles[particle].clusterPosition[i] - particles[moveParams.seed].clusterPosition[i];
 
             // Calculate position rotation vector.
             if (is3D) rotate3D(v1, moveParams.trialVector, v2, direction*moveParams.stepSize);
@@ -666,11 +698,11 @@ namespace vmmc
         std::vector<double> delta(dimension);
 
         // Calculate minumum image separation.
-        computeSeparation(linker.pseudoPosition, particles[particle].preMovePosition, delta);
+        computeSeparation(linker.clusterPosition, particles[particle].preMovePosition, delta);
 
-        // Assign pseudo-coordinate based on minumum image separation.
+        // Assign cluster position based on minumum image separation.
         for (unsigned int i=0;i<dimension;i++)
-            particles[particle].pseudoPosition[i] = linker.pseudoPosition[i] + delta[i];
+            particles[particle].clusterPosition[i] = linker.clusterPosition[i] + delta[i];
 
         // Update move list.
         particles[particle].isMoving = true;

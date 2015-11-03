@@ -131,7 +131,7 @@ Note that the `-std=c++11` compiler flag is needed for `std::function` and
 
 ## Dependencies
 LibVMMC uses the [Mersenne Twister](http://en.wikipedia.org/wiki/Mersenne_Twister)
-psuedorandom number generator. A C++11 implementation using `std::random` is
+pseudorandom number generator. A C++11 implementation using `std::random` is
 included as a bundled header file, `MersenneTwister.h`. See the source code or
 generate Doxygen documentation with `make doc` for details on how to use it.
 
@@ -170,9 +170,7 @@ typedef std::function<double (unsigned int index, double position[],
 
 This callback function is currently somewhat redundant since it is possible to
 achieve the same outcome by combining the `PairEnergyCallback` and
-`InteractionsCallback` functions described below. Ultimately, the callback
-will be able to account for non-pairwise terms in the potential, such as
-an external field.
+`InteractionsCallback` functions described below.
 
 ### Pair energy
 Calculate the pair interaction between two particles.
@@ -218,6 +216,20 @@ typedef std::function<void (unsigned int index, double position[],
 `position` = The coordinate vector of the particle following the move.
 
 `orientation` = The orientation unit vector of the particle following the move.
+
+### Non-pairwise energy (optional)
+Test for non-pairwise energy contributions, such as interactions with a
+surface or external field.
+
+```cpp
+typedef std::function<double (unsigned int index, double position[],
+    double orientation[])> NonPairwiseCallback;
+```
+`index` = The index of the  particle.
+
+`position` = The coordinate vector of the particle.
+
+`orientation` = The orientation unit vector of the particle.
 
 ### Boundary condition (optional)
 Test for a custom boundary condition. This should return true if the particle
@@ -388,6 +400,8 @@ The following example codes showing how to interface with LibVMMC are included
 in the `demos` directory.
 
 * `square_wellium.cpp`: A simulation of a square-well fluid in two- or three-dimensions.
+* `square_wellium_wall.cpp`: A simulation of a square-well fluid interacting with a wall
+in two- or three-dimensions.
 * `square_wellium_spherocylinder.cpp`: A simulation of a three dimensional square-well
 fluid confined within an inert spherocylinder.
 * `lennard_jonesium.cpp`: A simulation of a Lennard-Jones fluid in two- or three-dimensions.
@@ -547,9 +561,6 @@ the cluster to overlap.
 free functions as callbacks.
 
 ## Tips
-* The `EnergyCallback` function can be used to account for non-pairwise terms
-in the potential, such as an external field, or the interaction between
-particles and a surface.
 * It is not a requirement that all particles in the simulation box be of the same
 type. Make use of the particle indices that are passed to callback functions in
 order to distinguish different species.
