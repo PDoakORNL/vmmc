@@ -21,10 +21,10 @@
 int main(int argc, char** argv)
 {
     // Simulation parameters.
-    unsigned int dimension = 3;                     // dimension of simulation box
+    unsigned int dimension = 2;                     // dimension of simulation box
     unsigned int nParticles = 1000;                 // number of particles
-    double interactionEnergy = 2;                   // interaction energy scale (in units of kBT)
-    double interactionRange = 2.5;                  // size of interaction range (in units of particle diameter)
+    double interactionEnergy = 4;                   // interaction energy scale (in units of kBT)
+    double interactionRange = 4.5;                  // size of interaction range (in units of particle diameter)
     double density = 0.05;                          // particle density
     double baseLength;                              // base length of simulation box
     unsigned int maxInteractions = 100;             // maximum number of interactions per particle
