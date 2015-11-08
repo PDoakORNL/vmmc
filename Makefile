@@ -38,7 +38,7 @@ project := vmmc
 CXX := g++-5
 
 # Installation path.
-PREFIX := $HOME/local
+PREFIX := $(HOME)/local
 
 # Path for source files.
 src_dir := src
@@ -79,6 +79,8 @@ iflags_exec := -m 0755
 # Install flags for non-executable files.
 iflags := -m 0644
 
+outside_includes := -I/Users/epd/codes/exafmm/include -I/Users/epd/codes/exafmm/vectorclass -DEXAFMM_LAPLACE -DEXAFMM_CARTESIAN -DEXAFMM_EXPANSION=4
+
 # Git commit information.
 commit := $(shell git describe --abbrev=4 --dirty --always --tags 2> /dev/null)
 
@@ -92,10 +94,10 @@ python_header := ${VIRTUAL_ENV}/include/python2.7
 python_library := /usr/local/Cellar/python/2.7.10/Frameworks/Python.framework/Versions/2.7/lib/libpython2.7.dylib
 
 # C++ compiler flags for development build.
-cxxflags_devel := -O0 -std=c++11 -g -Wall -Isrc -DCOMMIT=\"$(commit)\" $(OPTFLAGS)
+cxxflags_devel := -O0 -std=c++11 -g -Wall -Isrc $(outside_includes) -DCOMMIT=\"$(commit)\" $(OPTFLAGS)
 
 # C++ compiler flags for release build.
-cxxflags_release := -O3 -std=c++11 -funroll-loops -DNDEBUG -Isrc -DCOMMIT=\"$(commit)\" $(OPTFLAGS)
+cxxflags_release := -O3 -std=c++11 -funroll-loops -DNDEBUG -Isrc $(outside_includes) -DCOMMIT=\"$(commit)\" $(OPTFLAGS)
 
 # Default to release build.
 CXXFLAGS := $(cxxflags_release)
