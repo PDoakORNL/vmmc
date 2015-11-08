@@ -61,7 +61,7 @@ int main(int argc, char** argv)
     cells.setDimension(dimension);
     cells.initialise(box.boxSize, interactionRange);
 
-    // Initialise the Lennard-Jones potential model.
+    // Initialise the MMolecule potential model.
     MMolecule mmolecule(box, particles, cells,
         maxInteractions, interactionEnergy, interactionRange);
 
@@ -100,25 +100,15 @@ int main(int argc, char** argv)
     // Initialise the VMMC callback functions.
     using namespace std::placeholders;
     vmmc::CallbackFunctions callbacks;
-#ifndef ISOTROPIC
+
     callbacks.energyCallback =
-        std::bind(&LennardJonesium::computeEnergy, lennardJonesium, _1, _2, _3);
+        std::bind(&MMolecule::computeEnergy, mmolecule, _1, _2, _3);
     callbacks.pairEnergyCallback =
-        std::bind(&LennardJonesium::computePairEnergy, lennardJonesium, _1, _2, _3, _4, _5, _6);
+        std::bind(&MMolecule::computePairEnergy, mmolecule, _1, _2, _3, _4, _5, _6);
     callbacks.interactionsCallback =
-        std::bind(&LennardJonesium::computeInteractions, lennardJonesium, _1, _2, _3, _4);
+        std::bind(&MMolecule::computeInteractions, mmolecule, _1, _2, _3, _4);
     callbacks.postMoveCallback =
-        std::bind(&LennardJonesium::applyPostMoveUpdates, lennardJonesium, _1, _2, _3);
-#else
-    callbacks.energyCallback =
-        std::bind(&LennardJonesium::computeEnergy, lennardJonesium, _1, _2);
-    callbacks.pairEnergyCallback =
-        std::bind(&LennardJonesium::computePairEnergy, lennardJonesium, _1, _2, _3, _4);
-    callbacks.interactionsCallback =
-        std::bind(&LennardJonesium::computeInteractions, lennardJonesium, _1, _2, _3);
-    callbacks.postMoveCallback =
-        std::bind(&LennardJonesium::applyPostMoveUpdates, lennardJonesium, _1, _2);
-#endif
+        std::bind(&MMolecule::applyPostMoveUpdates, mmolecule, _1, _2, _3);
 
     // Initialise the VMMC object.
 #ifndef ISOTROPIC
@@ -140,7 +130,7 @@ int main(int argc, char** argv)
         else io.appendXyzTrajectory(dimension, particles, false);
 
         // Report.
-        printf("sweeps = %9.4e, energy = %5.4f\n", ((double) (i+1)*1000), lennardJonesium.getEnergy());
+        printf("sweeps = %9.4e, energy = %5.4f\n", ((double) (i+1)*1000), mmolecule.getEnergy());
     }
 
     std::cout << "\nComplete!\n";

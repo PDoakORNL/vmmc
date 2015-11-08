@@ -256,6 +256,11 @@ $(demos): %: %.cpp $(demo_library_header) $(library) $(demo_library) $(demo_obje
 	$(call colorecho, 1, "--> Linking CXX executable $@")
 	-$(CXX) $(CXXFLAGS) -Wfatal-errors -I$(demo_dir)/src $@.cpp $(library) $(demo_library) $(LIBS) $(LDFLAGS) -o $@
 
+# Compile exa_vmmc
+# $(exa_vmmc): $(exa_vmmc_sources) $(library) $(demo_library) $(exa_library) $(exa_objects)
+# 	$(call colorecho, 1, "--> Linking CXX executable $@")
+# 	-$(CXX) $(CXXFLAGS) -Wfatal-errors -I$(demo_dir)/src 
+
 # Compile C++ Python API demonstration code.
 $(python_demos): $(python_sources) .check_python .compiler_flags
 	$(call colorecho, 1, "--> Linking CXX executable $@")
