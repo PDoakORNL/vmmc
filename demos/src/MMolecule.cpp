@@ -15,7 +15,7 @@
   along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "MMolecule.h"
+#include "MMolecule.hpp"
 #include "bound_box.h"
 #include "build_tree.h"
 #include "dataset.h"

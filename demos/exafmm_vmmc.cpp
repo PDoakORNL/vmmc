@@ -17,6 +17,7 @@
 
 #include "Demo.h"
 #include "VMMC.h"
+#include "MMolecule.hpp"
 
 
 int main(int argc, char** argv)
