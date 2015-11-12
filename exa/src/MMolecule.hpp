@@ -25,7 +25,6 @@
 #include "traversal.h"
 #include "up_down_pass.h"
 #include "build_tree.h"
-#include "atom.h"
 
 /*! \file MMolecule.h
 */

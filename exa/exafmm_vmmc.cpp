@@ -15,7 +15,7 @@
   along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "Demo.h"
+#include "Exa.h"
 #include "VMMC.h"
 #include "MMolecule.hpp"
 
@@ -23,7 +23,7 @@
 int main(int argc, char** argv)
 {
     // Simulation parameters.
-    unsigned int dimension = 2;                     // dimension of simulation box
+    unsigned int dimension = 3;                     // dimension of simulation box
     unsigned int nAtoms = 1000;                 // number of atoms
     double interactionEnergy = 4;                   // interaction energy scale (in units of kBT)
     double interactionRange = 4.5;                  // size of interaction range (in units of particle diameter)
@@ -61,7 +61,6 @@ int main(int argc, char** argv)
     // Initialise the MMolecule potential model.
     MMolecule mmolecule(box, atoms, cells,
         maxInteractions, interactionEnergy, interactionRange);
-
     // Initialise random number generator.
     MersenneTwister rng;
 
@@ -97,15 +96,15 @@ int main(int argc, char** argv)
     vmmc::CallbackFunctions callbacks;
 
     callbacks.energyCallback =
-        std::bind(&MMolecule::computeEnergy, mmolecule, _1, _2, _3);
+        std::bind(&MMolecule::computeEnergy, &mmolecule, _1, _2, _3);
     callbacks.pairEnergyCallback =
-        std::bind(&MMolecule::computePairEnergy, mmolecule, _1, _2, _3, _4, _5, _6);
+        std::bind(&MMolecule::computePairEnergy, &mmolecule, _1, _2, _3, _4, _5, _6);
     callbacks.nonPairwiseCallback =
-      std::bind(&MMolecule::nonPairwiseCallback, mmolecule, _1, _2, _3);
+      std::bind(&MMolecule::nonPairwiseCallback, &mmolecule, _1, _2, _3);
     callbacks.interactionsCallback =
-        std::bind(&MMolecule::computeInteractions, mmolecule, _1, _2, _3, _4);
+        std::bind(&MMolecule::computeInteractions, &mmolecule, _1, _2, _3, _4);
     callbacks.postMoveCallback =
-        std::bind(&MMolecule::applyPostMoveUpdates, mmolecule, _1, _2, _3);
+        std::bind(&MMolecule::applyPostMoveUpdates, &mmolecule, _1, _2, _3);
 
     // Initialise the VMMC object.
 #ifndef ISOTROPIC

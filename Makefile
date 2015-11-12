@@ -35,7 +35,7 @@ SHELL := bash
 project := vmmc
 
 # C++ compiler.
-CXX := g++-5
+CXX := g++
 
 # Installation path.
 PREFIX := $(HOME)/local
@@ -46,11 +46,15 @@ src_dir := src
 # Path for demo code.
 demo_dir := demos
 
+exa_dir := exa
+
 # Path for object files.
 obj_dir := obj
 
 # Path for demo object files.
 demo_obj_dir := $(demo_dir)/obj
+
+exa_obj_dir := $(exa_dir)/obj
 
 # Path for the library.
 lib_dir := lib
@@ -58,17 +62,23 @@ lib_dir := lib
 # Path for the demonstration library.
 demo_lib_dir := $(demo_dir)/lib
 
+exa_lib_dir := $(exa_dir)/lib
+
 # Library header file.
 library_header := $(src_dir)/VMMC.h
 
 # Demo header file.
 demo_library_header := $(demo_dir)/src/Demo.h
 
+exa_library_header := $(exa_dir)/src/Exa.h
+
 # Generate library target name.
 library := $(lib_dir)/lib$(project).a
 
 # Generate demo library target name.
 demo_library := $(demo_lib_dir)/libdemo.a
+
+exa_library := $(exa_lib_dir)/libexa.a
 
 # Install command.
 install_cmd := install
@@ -94,7 +104,7 @@ python_header := ${VIRTUAL_ENV}/include/python2.7
 python_library := /usr/local/Cellar/python/2.7.10/Frameworks/Python.framework/Versions/2.7/lib/libpython2.7.dylib
 
 # C++ compiler flags for development build.
-cxxflags_devel := -O0 -std=c++11 -g -Wall -Isrc $(outside_includes) -DCOMMIT=\"$(commit)\" $(OPTFLAGS)
+cxxflags_devel := -std=c++11 -gdwarf-2 -g3 -Wall -Isrc $(outside_includes) -DCOMMIT=\"$(commit)\" $(OPTFLAGS) -D_GLIBCXX_DEBUG
 
 # C++ compiler flags for release build.
 cxxflags_release := -O3 -std=c++11 -funroll-loops -DNDEBUG -Isrc $(outside_includes) -DCOMMIT=\"$(commit)\" $(OPTFLAGS)
@@ -118,6 +128,16 @@ demo_sources := $(wildcard $(demo_dir)/src/*.cpp)
 temp := $(patsubst %.cpp,%.o,$(demo_sources))
 demo_objects := $(subst $(demo_dir)/src,$(demo_obj_dir),$(temp))
 
+# Source files and executable names for exas.
+exa_files := $(wildcard $(exa_dir)/*.cpp)
+exas := $(patsubst %.cpp,%,$(exa_files))
+exa_headers := $(sort $(wildcard $(exa_dir)/src/*.h) $(wildcard $(exa_dir)/src/*.hpp))
+exa_headers := $(filter-out $(exa_library_header), $(exa_headers))
+exa_sources := $(wildcard $(exa_dir)/src/*.cpp)
+temp := $(patsubst %.cpp,%.o,$(exa_sources))
+exa_objects := $(subst $(exa_dir)/src,$(exa_obj_dir),$(temp))
+
+
 # Source files and executable names for Python demos.
 python_demo_files := $(wildcard $(demo_dir)/python/*.cpp)
 python_demos := $(patsubst %.cpp,%,$(python_demo_files))
@@ -139,6 +159,7 @@ help:
 	@echo " help       -->  print this help message"
 	@echo " build      -->  build library and demos (default=release)"
 	@echo " devel      -->  build using development compiler flags (debug)"
+	@echo " exa    -->  build exafmm_vmmc using debug compiler flags (optimized)"
 	@echo " release    -->  build using release compiler flags (optimized)"
 	@echo " doc        -->  generate source code documentation with doxygen"
 	@echo " clean      -->  remove object and dependency files"
@@ -166,6 +187,9 @@ devel: build
 # Set release compilation flags and build.
 release: CXXFLAGS := $(cxxflags_release)
 release: build
+
+exa: CXXFLAGS := $(cxxflags_devel)
+exa: exab
 
 # Print compiler flags.
 devel release:
@@ -215,9 +239,28 @@ $(demo_obj_dir)/%.o: $(demo_dir)/src/%.cpp .compiler_flags
 		sed -e 's/^ *//' -e 's/$$/:/' >> $(demo_obj_dir)/$*.d
 	@rm -f $*.d.tmp
 
+$(exa_obj_dir)/%.o: $(exa_dir)/src/%.cpp .compiler_flags
+	@echo "--> Building CXX object $*.o"
+	$(CXX) $(CXXFLAGS) -c -o $(exa_obj_dir)/$*.o $(exa_dir)/src/$*.cpp
+	$(CXX) -MM $(CXXFLAGS) $(exa_dir)/src/$*.cpp > $*.d
+	@mv -f $*.d $*.d.tmp
+	@sed -e 's|.*:|$(obj_dir)/$*.o:|' < $*.d.tmp > $(exa_obj_dir)/$*.d
+	@sed -e 's/.*://' -e 's/\\$$//' < $*.d.tmp | fmt -1 | \
+		sed -e 's/^ *//' -e 's/$$/:/' >> $(exa_obj_dir)/$*.d
+	@rm -f $*.d.tmp
+
+
+
+
+
 # Build the library and demos.
 .PHONY: build
 build: $(obj_dir) $(demo_obj_dir) $(library) $(demo_library) $(demo_library_header) $(demos) $(python_demos)
+
+# Build the library and demos.
+.PHONY: exab
+exab: $(obj_dir) $(exa_obj_dir) $(library) $(exa_library) $(exa_library_header) $(exas)
+
 
 # Create output directory for object and dependency files.
 $(obj_dir):
@@ -226,6 +269,9 @@ $(obj_dir):
 # Create output directory for demo object and dependency files.
 $(demo_obj_dir):
 	mkdir $(demo_obj_dir)
+
+$(exa_obj_dir):
+	mkdir $(exa_obj_dir)
 
 # Create demo library header file.
 $(demo_library_header): $(demo_headers)
@@ -236,6 +282,16 @@ $(demo_library_header): $(demo_headers)
 		echo "#include \"$$h\"";                \
 	done | sort -g >> $(demo_library_header)
 	@echo -e "\n#endif" >> $(demo_library_header)
+
+# Create exa library header file.
+$(exa_library_header): $(exa_headers)
+	@echo 4, "--> Generating CXX library header $(exa_library_header)"
+	@echo -e "#ifndef _EXA_H\n#define _EXA_H\n" > $(exa_library_header)
+	@for i in $(exa_headers);                  \
+		do h=`echo $$i | cut -d '/' -f 3`;      \
+		echo "#include \"$$h\"";                \
+	done | sort -g >> $(exa_library_header)
+	@echo -e "\n#endif" >> $(exa_library_header)
 
 # Build the static library.
 $(library): $(objects)
@@ -251,15 +307,23 @@ $(demo_library): $(demo_objects)
 	ar -rcs $@ $(demo_objects)
 	ranlib $@
 
+# Build the static demo library.
+$(exa_library): $(exa_objects)
+	$(call colorecho, 1, "--> Linking CXX static library $(exa_library)")
+	mkdir -p $(exa_lib_dir)
+	ar -rcsv $@ $(exa_objects)
+	ranlib $@
+
+
 # Compile demonstration code.
 $(demos): %: %.cpp $(demo_library_header) $(library) $(demo_library) $(demo_objects)
 	$(call colorecho, 1, "--> Linking CXX executable $@")
 	-$(CXX) $(CXXFLAGS) -Wfatal-errors -I$(demo_dir)/src $@.cpp $(library) $(demo_library) $(LIBS) $(LDFLAGS) -o $@
 
-# Compile exa_vmmc
-# $(exa_vmmc): $(exa_vmmc_sources) $(library) $(demo_library) $(exa_library) $(exa_objects)
-# 	$(call colorecho, 1, "--> Linking CXX executable $@")
-# 	-$(CXX) $(CXXFLAGS) -Wfatal-errors -I$(demo_dir)/src 
+$(exas): %: %.cpp  $(exa_library_header) $(library)  $(exa_library) $(exa_objects)
+	$(call colorecho, 1, "--> Linking CXX executable $@")
+	-$(CXX) $(CXXFLAGS) -Wfatal-errors -I$(exa_dir)/src $@.cpp $(library) $(exa_library) $(LIBS) $(LDFLAGS) -o $@
+
 
 # Compile C++ Python API demonstration code.
 $(python_demos): $(python_sources) .check_python .compiler_flags
@@ -307,7 +371,13 @@ clean:
 	$(call colorecho,6,"--> Cleaning CXX object and dependency files")
 	rm -rf $(obj_dir)
 	rm -rf $(demo_obj_dir)
+	rm -rf $(exa_obj_dir)
 	rm -rf $(demo_library_header)
+	rm -rf $(lib_dir)
+	rm -rf $(demo_lib_dir)
+	rm -rf $(exa_lib_dir)
+	rm -rf $(exa_library_header)
+
 
 # Clean up everything produced by make.
 .PHONY: clobber

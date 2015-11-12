@@ -135,9 +135,11 @@ double MMolecule::nonPairwiseCallback(unsigned int particle,
 				      double position[],
 				      double orientation[])
 {
-  std::cout << position[0] << " " << position[1] << " " << position[2] << std::endl;
-  std::cout << (*pbodies)[particle].X[0] << " " << (*pbodies)[particle].X[1]
+  
+  std::cout << std::setprecision(16) <<position[0] << " " << position[1] << " " << position[2] << std::endl;
+  std::cout << std::setprecision(16) << (*pbodies)[particle].X[0] << " " << (*pbodies)[particle].X[1]
 	    << " " << (*pbodies)[particle].X[2] << std::endl;
+  std::cout << "accepted" << accepted << std::endl;
   FloatingPoint<double> lhs0(position[0]);
   FloatingPoint<double> rhs0((*pbodies)[particle].X[0]);
   FloatingPoint<double> lhs1(position[1]);
@@ -146,8 +148,8 @@ double MMolecule::nonPairwiseCallback(unsigned int particle,
   FloatingPoint<double> rhs2((*pbodies)[particle].X[2]);
   
   if (! lhs0.AlmostEquals(rhs0) ||
-      ! lhs0.AlmostEquals(rhs1) ||
-      ! lhs0.AlmostEquals(rhs2)) {
+      ! lhs1.AlmostEquals(rhs1) ||
+      ! lhs2.AlmostEquals(rhs2)) {
 	std::cout << "clean" << accepted << std::endl;
 	pjbodies->push_back((*pbodies)[particle]);
 	pjbodies->back().X[0];
@@ -185,5 +187,6 @@ void MMolecule::applyPostMoveUpdates(unsigned int, double[], double[])
 {
     updateBodies();
     accepted=1;
+    std::cout << "accepted" << accepted << std::endl;    
 }
   

@@ -60,7 +60,7 @@ public:
     {
         return default_uniform_real_distribution(generator);
     }
-
+    
     //! Generate a random integer between min and max (inclusive).
     /*! \param min
             The minium of the range.
@@ -76,6 +76,11 @@ public:
         return std::uniform_int_distribution<int>{min, max}(generator);
     }
 
+    double real(double min, double max )
+    {
+      return std:: uniform_real_distribution<double>{min,max}(generator);
+    }
+    
     //! Generate a random number from a normal distribution with
     /*! zero mean and unit standard deviation.
         \return
