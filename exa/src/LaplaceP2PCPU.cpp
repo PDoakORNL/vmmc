@@ -1,5 +1,7 @@
 #include "kernel.h"
 #include "simdvec.h"
+#include "FloatingPoint.h"
+
 using namespace exafmm;
 
 real_t kernel::eps2;
@@ -75,6 +77,7 @@ void kernel::P2P(C_iter Ci, C_iter Cj, bool mutual) {
     }
   }
 #endif
+  FloatingPoint<double> rhs0(0.0000);
   for ( ; i<ni; i++) {
     kreal_t pot = 0; 
     kreal_t ax = 0;
@@ -83,7 +86,8 @@ void kernel::P2P(C_iter Ci, C_iter Cj, bool mutual) {
     for (int j=0; j<nj; j++) {
       vec3 dX = Bi[i].X - Bj[j].X - Xperiodic;
       real_t R2 = norm(dX) + eps2;
-      if (R2 != 0) {
+      FloatingPoint<double> lhs0(R2);
+      if (! lhs0.AlmostEquals(rhs0)) {
         real_t invR2 = 1.0 / R2;
         real_t invR = Bi[i].SRC * Bj[j].SRC * sqrt(invR2);
         dX *= invR2 * invR;
@@ -168,6 +172,7 @@ void kernel::P2P(C_iter C) {
     }
   }
 #endif
+  FloatingPoint<double> rhs0(0.0000);
   for ( ; i<n; i++) {
     kreal_t pot = 0;
     kreal_t ax = 0;
@@ -176,7 +181,8 @@ void kernel::P2P(C_iter C) {
     for (int j=i+1; j<n; j++) {
       vec3 dX = B[j].X - B[i].X;
       real_t R2 = norm(dX) + eps2;
-      if (R2 != 0) {
+      FloatingPoint<double> lhs0(R2);
+      if (! lhs0.AlmostEquals(rhs0)) {
         real_t invR2 = 1.0 / R2;
         real_t invR = B[i].SRC * B[j].SRC * sqrt(invR2);
         dX *= invR2 * invR;

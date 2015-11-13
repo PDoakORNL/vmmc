@@ -191,6 +191,9 @@ release: build
 exa: CXXFLAGS := $(cxxflags_devel)
 exa: exab
 
+exa-release: CXXFLAGS := $(cxxflags_release)
+exa-release: exab
+
 # Print compiler flags.
 devel release:
 	$(call colorecho, 5, "--> CXXFLAGS: $(CXXFLAGS)")

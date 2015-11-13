@@ -61,7 +61,9 @@ public:
             The potential cut-off distance.
      */
     MMolecule(Box&, std::vector<Particle>&, CellList&, unsigned int, double, double, NodeInfo * = NULL);
-    
+
+  virtual double computeEnergy(unsigned int, double[], double[]);
+  
     //! Calculate the pair energy between two particles.
     /*! \param particle1
             The index of the first particle.
@@ -98,7 +100,7 @@ private:
 
     struct {
 	int ncrit = 64;
-	int dual = 0;
+	int dual = 1;
 	int full = 0;
 	int graft = 0;
 	int getMatrix = 0;

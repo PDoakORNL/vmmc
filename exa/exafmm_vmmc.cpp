@@ -119,14 +119,14 @@ int main(int argc, char** argv)
     for (unsigned int i=0;i<1000;i++)
     {
         // Increment simulation by 1000 Monte Carlo Sweeps.
-        vmmc++;
+        vmmc+= 100;
 
         // Append particle coordinates to an xyz trajectory.
         if (i == 0) io.appendXyzTrajectory(dimension, atoms, true);
         else io.appendXyzTrajectory(dimension, atoms, false);
 
         // Report.
-        printf("sweeps = %9.4e, energy = %5.4f\n", ((double) (i+1)), mmolecule.getEnergy());
+        printf("sweeps = %9.4e, energy = %5.4f\n", ((double) (i+1)*100), mmolecule.getEnergy());
     }
 
     std::cout << "\nComplete!\n";

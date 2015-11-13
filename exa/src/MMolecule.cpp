@@ -29,6 +29,7 @@
 #include "FloatingPoint.h"
 
 using exafmm::Bodies;
+using exafmm::B_iter;
 using exafmm::BoundBox;
 using exafmm::Bounds;
 using exafmm::BuildTree;
@@ -95,7 +96,19 @@ void MMolecule::updateBodies()
 	    (*pbodies)[i].X[j] = particles[i].position[j];
 	}
     }
-    std::cout << "updated bodies" << std::endl;
+    // std::cout << "updated bodies" << std::endl;
+}
+
+double MMolecule::computeEnergy(unsigned int particle, double position[], double orientation[])
+{
+      double energy = 0;      // energy counter
+      energy = Model::computeEnergy(particle,position,orientation);
+      //std::cout << "energy pair:" << energy;
+      double nonPair;
+      nonPair = this->nonPairwiseCallback(particle,position,orientation);  
+      energy += nonPair;
+      //std::cout << " + es " << std::setprecision(16) << nonPair << std::endl;
+      return energy;
 }
 
 double MMolecule::computePairEnergy(unsigned int particle1,
@@ -136,44 +149,54 @@ double MMolecule::nonPairwiseCallback(unsigned int particle,
 				      double orientation[])
 {
   
-  std::cout << std::setprecision(16) <<position[0] << " " << position[1] << " " << position[2] << std::endl;
-  std::cout << std::setprecision(16) << (*pbodies)[particle].X[0] << " " << (*pbodies)[particle].X[1]
-	    << " " << (*pbodies)[particle].X[2] << std::endl;
-  std::cout << "accepted" << accepted << std::endl;
-  FloatingPoint<double> lhs0(position[0]);
-  FloatingPoint<double> rhs0((*pbodies)[particle].X[0]);
-  FloatingPoint<double> lhs1(position[1]);
-  FloatingPoint<double> rhs1((*pbodies)[particle].X[1]);
-  FloatingPoint<double> lhs2(position[2]);
-  FloatingPoint<double> rhs2((*pbodies)[particle].X[2]);
+  // std::cout << std::setprecision(16) <<position[0] << " " << position[1] << " " << position[2] << std::endl;
+  // std::cout << std::setprecision(16) << (*pbodies)[particle].X[0] << " " << (*pbodies)[particle].X[1]
+  // 	    << " " << (*pbodies)[particle].X[2] << std::endl;
+  // std::cout << "accepted" << accepted << std::endl;
+  // FloatingPoint<double> lhs0(position[0]);
+  // FloatingPoint<double> rhs0((*pbodies)[particle].X[0]);
+  // FloatingPoint<double> lhs1(position[1]);
+  // FloatingPoint<double> rhs1((*pbodies)[particle].X[1]);
+  // FloatingPoint<double> lhs2(position[2]);
+  // FloatingPoint<double> rhs2((*pbodies)[particle].X[2]);
   
-  if (! lhs0.AlmostEquals(rhs0) ||
-      ! lhs1.AlmostEquals(rhs1) ||
-      ! lhs2.AlmostEquals(rhs2)) {
-	std::cout << "clean" << accepted << std::endl;
+  if (0) {// ! lhs0.AlmostEquals(rhs0) ||
+      // ! lhs1.AlmostEquals(rhs1) ||
+      // ! lhs2.AlmostEquals(rhs2)) {
+    //std::cout << "clean" << accepted << std::endl;
 	pjbodies->push_back((*pbodies)[particle]);
-	pjbodies->back().X[0];
-	pjbodies->back().X[1];
-	pjbodies->back().X[2];
+	//pjbodies->back().TRG[0] = pjbodies->back().SRC;
+	//pjbodies->back().TRG[1] = pjbodies->back().X[0];
+	//pjbodies->back().TRG[2] = pjbodies->back().X[1];
+	//pjbodies->back().TRG[3] = pjbodies->back().X[2];
+	//std::cout << pjbodies->back().SRC << " " << pjbodies->back().TRG[0] << std::endl;
 	*pbounds = pboundBox->getBounds(*pbodies);
 	*pbounds = pboundBox->getBounds(*pjbodies,*pbounds);
 	*pjcells = pbuildTree->buildTree(*pjbodies, *pbuffer, *pbounds);
 	pupDownPass->upwardPass(*pjcells);
 	ptraversal->traverse(*pcells, *pjcells, cycle, args.dual, false);
-	
-	return ((*pjbodies)[particle].TRG[0] * (*pjbodies)[particle].SRC);
-    } else if (accepted) {
-        std::cout << "rebuild main tree" << std::endl;
+	pupDownPass->downwardPass(*pcells);
+	double result;
+	result = (pjbodies->back().TRG[0]) * (pjbodies->back().SRC);
+	//std::cout << result << std::endl;
+	return result;
+  } else if (1) {//(accepted) {
+    //std::cout << "rebuild main tree" << std::endl;
 	*pbounds = pboundBox->getBounds(*pbodies);
 	*pcells = pbuildTree->buildTree(*pbodies, *pbuffer, *pbounds);
+	for (B_iter B=pbodies->begin(); B!=pbodies->end(); B++) {     // Loop over bodies
+	  B->TRG = 0;                                             //  Clear target values
+	  B->IBODY = B-pbodies->begin();                            //  Initial body numbering
+	  B->WEIGHT = 1;                                          //  Initial weight
+	}                                                         // End loop over bodies
+	pjbodies->clear();
 	pupDownPass->upwardPass(*pcells);
 	ptraversal->initListCount(*pcells);
 	ptraversal->initWeight(*pcells);
 	ptraversal->traverse(*pcells, *pcells, cycle, args.dual, args.mutual);
-	pjbodies->clear();
 	pupDownPass->downwardPass(*pcells);
 	ptraversal->writeList(*pcells,0);
-	ptraversal->normalize(*pbodies);
+	//ptraversal->normalize(*pbodies);
 	accepted=0;
 	return ((*pbodies).back().TRG[0] * (*pbodies).back().SRC);
     } else {
@@ -187,6 +210,6 @@ void MMolecule::applyPostMoveUpdates(unsigned int, double[], double[])
 {
     updateBodies();
     accepted=1;
-    std::cout << "accepted" << accepted << std::endl;    
+    // std::cout << "accepted" << accepted << std::endl;    
 }
   
