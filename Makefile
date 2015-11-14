@@ -89,7 +89,7 @@ iflags_exec := -m 0755
 # Install flags for non-executable files.
 iflags := -m 0644
 
-outside_includes := -I/Users/epd/codes/exafmm/include -I/Users/epd/codes/exafmm/vectorclass -DEXAFMM_LAPLACE -DEXAFMM_CARTESIAN -DEXAFMM_EXPANSION=4
+outside_includes := -I/Users/epd/codes/exafmm/include -I/Users/epd/codes/exafmm/vectorclass -I/usr/local/Cellar//gsl/1.16/include/gsl -DEXAFMM_LAPLACE -DEXAFMM_CARTESIAN -DEXAFMM_EXPANSION=4
 
 # Git commit information.
 commit := $(shell git describe --abbrev=4 --dirty --always --tags 2> /dev/null)
@@ -107,7 +107,7 @@ python_library := /usr/local/Cellar/python/2.7.10/Frameworks/Python.framework/Ve
 cxxflags_devel := -std=c++11 -gdwarf-2 -g3 -Wall -Isrc $(outside_includes) -DCOMMIT=\"$(commit)\" $(OPTFLAGS) -D_GLIBCXX_DEBUG
 
 # C++ compiler flags for release build.
-cxxflags_release := -O3 -std=c++11 -funroll-loops -DNDEBUG -Isrc $(outside_includes) -DCOMMIT=\"$(commit)\" $(OPTFLAGS)
+cxxflags_release := -O3 -std=c++11 -funroll-loops -DNDEBUG -Isrc $(outside_includes) -DCOMMIT=\"$(commit)\" $(OPTFLAGS) -fsanitize=address
 
 # Default to release build.
 CXXFLAGS := $(cxxflags_release)

@@ -24,13 +24,13 @@ int main(int argc, char** argv)
 {
     // Simulation parameters.
     unsigned int dimension = 3;                     // dimension of simulation box
-    unsigned int nAtoms = 1000;                 // number of atoms
+    unsigned int nAtoms = 300;                 // number of atoms
     double interactionEnergy = 4;                   // interaction energy scale (in units of kBT)
     double interactionRange = 4.5;                  // size of interaction range (in units of particle diameter)
-    double density = 0.05;                          // particle density
+    double density = 0.005;                          // particle density
     double baseLength;                              // base length of simulation box
     unsigned int maxInteractions = 100;             // maximum number of interactions per particle
-
+    
     // Data structures.
     std::vector<Particle> atoms(nAtoms);    // particle container
     CellList cells;                                 // cell list
@@ -119,14 +119,29 @@ int main(int argc, char** argv)
     for (unsigned int i=0;i<1000;i++)
     {
         // Increment simulation by 1000 Monte Carlo Sweeps.
-        vmmc+= 100;
-
+        //std::vector<Particle> tempAtoms(atoms);
+        vmmc+= 100 * nAtoms;
+	// std::vector<Particle>::iterator i_atoms, i_tempAtoms;
+	// i_atoms = atoms.begin();
+	// i_tempAtoms = tempAtoms.begin();
+	// while(i_tempAtoms != tempAtoms.end()) {
+	//   if (i_atoms->position != i_tempAtoms->position) {
+	//     std::cout << i_atoms->index << std::endl;
+	//     std::cout << std::setprecision(12) << std::setw(14) << i_atoms->position[0] << i_atoms->position[1] << i_atoms->position[2] << std::endl;
+	//     std::cout << i_tempAtoms->position[0] << std::endl;
+	    
+	//   }
+	//   i_tempAtoms++;
+	//   i_atoms++;
+	// }
+	
         // Append particle coordinates to an xyz trajectory.
         if (i == 0) io.appendXyzTrajectory(dimension, atoms, true);
         else io.appendXyzTrajectory(dimension, atoms, false);
 
         // Report.
-        printf("sweeps = %9.4e, energy = %5.4f\n", ((double) (i+1)*100), mmolecule.getEnergy());
+        printf("sweeps = %9.4e, energy = %5.4f\n", ((double) (i+1)*1000), mmolecule.getEnergy());
+	printf("accepts = %6llu\n", vmmc.getAccepts());
     }
 
     std::cout << "\nComplete!\n";

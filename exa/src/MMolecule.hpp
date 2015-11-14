@@ -25,6 +25,7 @@
 #include "traversal.h"
 #include "up_down_pass.h"
 #include "build_tree.h"
+#include "gsl_const_mksa.h"
 
 /*! \file MMolecule.h
 */
@@ -97,7 +98,11 @@ public:
     
 private:
     const exafmm::real_t cycle = 2 * M_PI;
-
+  const exafmm::real_t fmmUnits = pow(double(GSL_CONST_MKSA_ELECTRON_CHARGE),2.0) / GSL_CONST_MKSA_ANGSTROM;
+    const exafmm::real_t temperature = 300;
+    const exafmm::real_t vmmcUnits = (GSL_CONST_MKSA_BOLTZMANN) * temperature;
+    const exafmm::real_t c_ftov = fmmUnits/vmmcUnits;
+  
     struct {
 	int ncrit = 64;
 	int dual = 1;
@@ -113,6 +118,8 @@ private:
 	double theta =.4;
 	int useRmax = 0;
     } args;
+
+    void initTargets(Bodies * ptbodies); 
 
     Bodies *pbodies;
     Bodies *pbodies2;

@@ -7,6 +7,17 @@ using namespace exafmm;
 real_t kernel::eps2;
 vec3 kernel::Xperiodic;
 
+bool checkBodyABODY(B_iter Bi, int ni, B_iter Bj, int nj) {
+  for (int i = 0; i < ni; i++) {
+    for (int j = 0; j < nj; j++) {
+      if (Bi[i].ABODY == Bj[i].ABODY) {
+	return false;
+      }
+    }
+  }
+  return true;
+}
+
 void kernel::P2P(C_iter Ci, C_iter Cj, bool mutual) {
   B_iter Bi = Ci->BODY;
   B_iter Bj = Cj->BODY;
@@ -87,7 +98,7 @@ void kernel::P2P(C_iter Ci, C_iter Cj, bool mutual) {
       vec3 dX = Bi[i].X - Bj[j].X - Xperiodic;
       real_t R2 = norm(dX) + eps2;
       FloatingPoint<double> lhs0(R2);
-      if (! lhs0.AlmostEquals(rhs0)) {
+      if (checkBodyABODY(Bi,ni,Bj,nj) && ! lhs0.AlmostEquals(rhs0)) {
         real_t invR2 = 1.0 / R2;
         real_t invR = Bi[i].SRC * Bj[j].SRC * sqrt(invR2);
         dX *= invR2 * invR;

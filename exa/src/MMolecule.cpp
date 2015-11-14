@@ -76,6 +76,7 @@ MMolecule::MMolecule(
 
     // Work out the potential shift.
     potentialShift = std::pow(1.0/interactionRange, 12) - std::pow(1/interactionRange, 6);
+
 }
 
 void MMolecule::initBodies()
@@ -148,17 +149,16 @@ double MMolecule::nonPairwiseCallback(unsigned int particle,
 				      double position[],
 				      double orientation[])
 {
-  
   // std::cout << std::setprecision(16) <<position[0] << " " << position[1] << " " << position[2] << std::endl;
   // std::cout << std::setprecision(16) << (*pbodies)[particle].X[0] << " " << (*pbodies)[particle].X[1]
   // 	    << " " << (*pbodies)[particle].X[2] << std::endl;
   // std::cout << "accepted" << accepted << std::endl;
-  // FloatingPoint<double> lhs0(position[0]);
-  // FloatingPoint<double> rhs0((*pbodies)[particle].X[0]);
-  // FloatingPoint<double> lhs1(position[1]);
-  // FloatingPoint<double> rhs1((*pbodies)[particle].X[1]);
-  // FloatingPoint<double> lhs2(position[2]);
-  // FloatingPoint<double> rhs2((*pbodies)[particle].X[2]);
+  FloatingPoint<double> lhs0(position[0]);
+  FloatingPoint<double> rhs0((*pbodies)[particle].X[0]);
+  FloatingPoint<double> lhs1(position[1]);
+  FloatingPoint<double> rhs1((*pbodies)[particle].X[1]);
+  FloatingPoint<double> lhs2(position[2]);
+  FloatingPoint<double> rhs2((*pbodies)[particle].X[2]);
   
   if (0) {// ! lhs0.AlmostEquals(rhs0) ||
       // ! lhs1.AlmostEquals(rhs1) ||
@@ -170,26 +170,26 @@ double MMolecule::nonPairwiseCallback(unsigned int particle,
 	//pjbodies->back().TRG[2] = pjbodies->back().X[1];
 	//pjbodies->back().TRG[3] = pjbodies->back().X[2];
 	//std::cout << pjbodies->back().SRC << " " << pjbodies->back().TRG[0] << std::endl;
+	initTargets(pjbodies);
 	*pbounds = pboundBox->getBounds(*pbodies);
 	*pbounds = pboundBox->getBounds(*pjbodies,*pbounds);
 	*pjcells = pbuildTree->buildTree(*pjbodies, *pbuffer, *pbounds);
 	pupDownPass->upwardPass(*pjcells);
 	ptraversal->traverse(*pcells, *pjcells, cycle, args.dual, false);
 	pupDownPass->downwardPass(*pcells);
-	double result;
+	double result = 0;
 	result = (pjbodies->back().TRG[0]) * (pjbodies->back().SRC);
 	//std::cout << result << std::endl;
-	return result;
-  } else if (1) {//(accepted) {
+	if (result!=result) {
+	  std::cout << particle << " produced: " << result << std::endl;
+	}
+	return result * c_ftov;
+  } else if (1) { //(accepted) {
     //std::cout << "rebuild main tree" << std::endl;
-	*pbounds = pboundBox->getBounds(*pbodies);
+        initTargets(pbodies);
+        *pbounds = pboundBox->getBounds(*pbodies);
 	*pcells = pbuildTree->buildTree(*pbodies, *pbuffer, *pbounds);
-	for (B_iter B=pbodies->begin(); B!=pbodies->end(); B++) {     // Loop over bodies
-	  B->TRG = 0;                                             //  Clear target values
-	  B->IBODY = B-pbodies->begin();                            //  Initial body numbering
-	  B->WEIGHT = 1;                                          //  Initial weight
-	}                                                         // End loop over bodies
-	pjbodies->clear();
+	//pjbodies->clear();
 	pupDownPass->upwardPass(*pcells);
 	ptraversal->initListCount(*pcells);
 	ptraversal->initWeight(*pcells);
@@ -198,18 +198,34 @@ double MMolecule::nonPairwiseCallback(unsigned int particle,
 	ptraversal->writeList(*pcells,0);
 	//ptraversal->normalize(*pbodies);
 	accepted=0;
-	return ((*pbodies).back().TRG[0] * (*pbodies).back().SRC);
+	double result = 0;
+	result = ((*pbodies)[particle].TRG[0] * (*pbodies)[particle].SRC);
+	if (result!=result) {
+	  std::cout << particle << " produced: " << result << std::endl;
+	}
+	return result * c_ftov;
     } else {
-	return ((*pbodies).back().TRG[0] * (*pbodies).back().SRC);
+    return ((*pbodies)[particle].TRG[0] * (*pbodies)[particle].SRC) * c_ftov;
 	std::cout << "unexpected non-pairwise result" << std::endl;
     }
     
 }
 
-void MMolecule::applyPostMoveUpdates(unsigned int, double[], double[])
+void MMolecule::initTargets(Bodies * ptbodies) {
+  for (B_iter B=ptbodies->begin(); B!=ptbodies->end(); B++) {     // Loop over bodies
+	  B->TRG = 0;                                             //  Clear target values
+	  B->IBODY = B-ptbodies->begin();                            //  Initial body numbering
+	  B->WEIGHT = 1;                                          //  Initial weight
+	}                                                         // End loop over bodies
+}
+
+void MMolecule::applyPostMoveUpdates(unsigned int particle, double position[], double orientation[])
 {
-    updateBodies();
-    accepted=1;
-    // std::cout << "accepted" << accepted << std::endl;    
+  Model::applyPostMoveUpdates(particle, position, orientation);
+  for (unsigned int i=0;i<box.dimension;i++)
+  {
+      (*pbodies)[particle].X[i] = particles[particle].position[i];
+  }
+  accepted=1;
 }
   
