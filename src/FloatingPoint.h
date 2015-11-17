@@ -20,6 +20,7 @@
 // needs.  Other types can be easily added in the future if need
 // arises.
 #include <float.h>
+#include <limits>
 
 template <size_t size>
 class TypeWithSize {

@@ -114,7 +114,7 @@ private:
 	int mutual = 0;
 	int useRopt = 0;
 	int nspawn = 5000;
-	int threads = 1;
+	int threads = 8;
 	double theta =.4;
 	int useRmax = 0;
     } args;

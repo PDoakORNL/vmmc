@@ -27,6 +27,7 @@
 #include "thread.h"
 #include "nodeinfo.h"
 #include "FloatingPoint.h"
+#include <omp.h>
 
 using exafmm::Bodies;
 using exafmm::B_iter;
@@ -54,6 +55,7 @@ MMolecule::MMolecule(
     if(nodeinfo_ != NULL) {
         args.threads = nodeinfo_->threads;
     }
+    //args.threads = 8;
     
     pbodies = new Bodies(particles.size());
     pbodies2 = new Bodies(particles.size());
@@ -67,7 +69,9 @@ MMolecule::MMolecule(
     ptraversal = new Traversal(args.nspawn, args.images);
     pupDownPass = new UpDownPass(args.theta, args.useRmax, args.useRopt);
     num_threads(args.threads);
-
+    omp_set_num_threads(args.threads);
+    std::cout << "threads: " << omp_get_num_threads() << " " << args.threads
+	      << std::endl;
     exafmm::kernel::eps2 = 0.0;
     exafmm::kernel::setup();
     exafmm::logger::verbose = args.verbose;
