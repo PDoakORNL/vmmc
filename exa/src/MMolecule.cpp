@@ -40,27 +40,24 @@ using exafmm::UpDownPass;
 
 MMolecule::MMolecule(
     Box& box_,
-    std::vector<Particle>& atoms_,
+    Molecules& molecules_,
     CellList& cells_,
     unsigned int maxInteractions_,
     double interactionEnergy_,
     double interactionRange_,
-    NodeInfo * nodeinfo_) :
-  Model(box_, atoms_,
-	       cells_,
-	       maxInteractions_,
-	       interactionEnergy_,
-	       interactionRange_)
+    NodeInfo * nodeinfo_) : Model(box_, (Particles&) molecules_, cells_ , maxInteractions_, interactionEnergy_, interactionRange_), molecules(molecules_)
 {
     if(nodeinfo_ != NULL) {
         args.threads = nodeinfo_->threads;
     }
     //args.threads = 8;
-    
-    pbodies = new Bodies(particles.size());
-    pbodies2 = new Bodies(particles.size());
-    pjbodies = new Bodies(particles.size());
-    pbuffer = new Bodies(particles.size());
+ 
+    pbodies = NULL;
+    pvbodies = NULL;
+    pparticles = NULL;
+    // pbodies2 = new Bodies(particles.size());
+    // pjbodies = new Bodies(particles.size());
+    // pbuffer = NULL;
     pboundBox = new BoundBox(args.nspawn);
     pbounds = new Bounds;
     pbuildTree = new BuildTree(args.ncrit, args.nspawn);
@@ -68,52 +65,227 @@ MMolecule::MMolecule(
     pjcells = new Cells;
     ptraversal = new Traversal(args.nspawn, args.images);
     pupDownPass = new UpDownPass(args.theta, args.useRmax, args.useRopt);
-    num_threads(args.threads);
-    omp_set_num_threads(args.threads);
-    std::cout << "threads: " << omp_get_num_threads() << " " << args.threads
-	      << std::endl;
+
+    pvboundBox = new BoundBox(args.nspawn);
+    pvbounds = new Bounds;
+    pvbuildTree = new BuildTree(args.ncrit, args.nspawn);
+    pvcells = new Cells;
+    pvjcells = new Cells;
+    pvtraversal = new Traversal(args.nspawn, args.images);
+    pvupDownPass = new UpDownPass(args.theta, args.useRmax, args.useRopt);
+
+
+    
     exafmm::kernel::eps2 = 0.0;
     exafmm::kernel::setup();
     exafmm::logger::verbose = args.verbose;
     exafmm::logger::printTitle("FMM Parameters");
+
     //args.print(exafmm::logger::stringLength, P);
 
     // Work out the potential shift.
     potentialShift = std::pow(1.0/interactionRange, 12) - std::pow(1/interactionRange, 6);
-
 }
+
+MMolecule::~MMolecule() {
+    delete pbodies;
+    delete pparticles;
+    delete pboundBox;
+    delete pbounds;
+    delete pbuildTree;
+    delete pcells;
+    delete ptraversal;
+    delete pupDownPass;
+}    
 
 void MMolecule::initBodies()
 {
-    for (unsigned int i = 0; i < particles.size(); i++) {
-	(*pbodies)[i].SRC = particles[i].charge;
-	for (int j = 0; j < 3; j++) {
-	    (*pbodies)[i].X[j] = particles[i].position[j];
-	    //std::cout << (*pbodies)[i].X[j] << " " << particles[i].position[j] << std::endl;
+    long unsigned int numAtoms = molecules.size()*molecules[0].atoms.size();
+
+    std::cout << "pre news" << std::endl;
+    pbodies = new Bodies(numAtoms);
+    pvbodies = new Bodies(numAtoms);
+    pbuffer = new Bodies(numAtoms);
+    pparticles = new Bodies(molecules.size());
+    std::cout << "before doubles" << std::endl;
+    unsigned int nat = args.nat;
+    args.prscale = new double[nat*nat];
+    args.pgscale = new double[nat*nat];
+    args.pfgscale = new double[nat*nat];
+    for (unsigned int i = 0; i < nat*nat; i++) { 
+	args.prscale[i] = 1;
+	args.pgscale[i] = 0.0001;
+	args.pfgscale[i] = 0.0001;
+    }
+    std::cout << "pre VanDerWaals" << std::endl;
+    VDW = new VanDerWaals(1.0, 5.0, cycle, nat,
+			  args.prscale, args.pgscale, args.pfgscale);
+    // pbodies2 = new Bodies(particles.size());
+    // pjbodies = new Bodies(particles.size());
+    //pbuffer = new Bodies(numAtoms);
+    std::vector<double> apos(box.dimension);
+    unsigned int bc = 0;
+    for (unsigned int i = 0; i < molecules.size(); i++) {
+	for (unsigned int j = 0; j < box.dimension; j++)
+	{
+	    (*pparticles)[i].X[j] = molecules[i].position[j];
+	}
+    	for(Molecule::atom_iter a=molecules[i].atoms.begin();
+	    a < molecules[i].atoms.end();
+	    a++)
+	{
+	    molecules[i].get_apos(*a, apos);
+	    (*pbodies)[bc].SRC = a->charge;
+	    for (unsigned int j = 0; j < 3; j++) {
+		if (j < box.dimension) {
+		    (*pbodies)[bc].X[j] = apos[j];
+		} else {
+		    (*pbodies)[bc].X[j] = 0;
+		}
+	    }
+	    bc++;
 	}
     }
+    std::cout << "pre pvbodies copy" <<std::endl;
+    *pvbodies = *pbodies; 
 }
 
 void MMolecule::updateBodies()
 {
-    for (unsigned int i = 0; i < particles.size(); i++) {
-	for (int j = 0; j < 3; j++) {
-	    (*pbodies)[i].X[j] = particles[i].position[j];
+    std::vector<double> apos(box.dimension);
+    unsigned int bc = 0;
+    for (unsigned int i = 0; i < molecules.size(); i++) {
+	for (unsigned int j = 0; j < box.dimension; j++)
+	{
+	    (*pparticles)[i].X[j] = molecules[i].position[j];
+	}
+    	for(Molecule::atom_iter a=molecules[i].atoms.begin();
+	    a < molecules[i].atoms.end();
+	    a++)
+	{
+	    molecules[i].get_apos(*a, apos);
+	    for (unsigned int j = 0; j < 3; j++) {
+		if (j < box.dimension) {
+		    (*pbodies)[bc].X[j] = apos[j];
+		} else {
+		    (*pbodies)[bc].X[j] = 0;
+		}
+	    }
+	    bc++;
 	}
     }
-    // std::cout << "updated bodies" << std::endl;
+    *pvbodies = *pbodies;
 }
 
 double MMolecule::computeEnergy(unsigned int particle, double position[], double orientation[])
 {
-      double energy = 0;      // energy counter
-      energy = Model::computeEnergy(particle,position,orientation);
-      //std::cout << "energy pair:" << energy;
-      double nonPair;
-      nonPair = this->nonPairwiseCallback(particle,position,orientation);  
-      energy += nonPair;
-      //std::cout << " + es " << std::setprecision(16) << nonPair << std::endl;
-      return energy;
+    double energy = 0;      // energy counter
+    unsigned int atomIndex = 0;
+    FloatingPoint<double> lhs0(position[0]);
+    FloatingPoint<double> rhs0((*pparticles)[particle].X[0]);
+    FloatingPoint<double> lhs1(position[1]);
+    FloatingPoint<double> rhs1((*pparticles)[particle].X[1]);
+    // FloatingPoint<double> lhs2(position[2]);
+    // FloatingPoint<double> rhs2((*pparticles)[particle].X[2]);
+    if (!moved && lhs0.AlmostEquals(rhs0) &&
+	lhs1.AlmostEquals(rhs1) ){ //&&
+//	lhs2.AlmostEquals(rhs2)) {
+	
+	for (unsigned int i = 0; i < molecules.size(); i++)
+	{
+	    for (unsigned int j = 0; j < box.dimension; j++)
+	    {
+		(*pparticles)[i].X[j] = molecules[i].position[j];
+	    }
+	    for(Molecule::atom_iter a=molecules[i].atoms.begin();
+		a < molecules[i].atoms.end();
+		a++)
+	    {
+		energy += ((*pbodies)[atomIndex].TRG[0] * (*pbodies)[atomIndex].SRC);
+		atomIndex++; 
+	    }
+	}
+
+	atomIndex = 0;
+	for (unsigned int i = 0; i < molecules.size(); i++)
+	{
+	    for (unsigned int j = 0; j < box.dimension; j++)
+	    {
+		(*pparticles)[i].X[j] = molecules[i].position[j];
+	    }
+	    for(Molecule::atom_iter a=molecules[i].atoms.begin();
+		a < molecules[i].atoms.end();
+		a++)
+	    {
+		energy += (*pvbodies)[atomIndex].TRG[0];
+		atomIndex++; 
+	    }
+	}
+	
+	energy = energy * c_ftov;
+
+	if (energy!=energy) {
+	    std::cout << particle << " produced: " << energy << std::endl;
+	}
+
+    } else {
+        initTargets(pbodies);
+        *pbounds = pboundBox->getBounds(*pbodies);
+	*pcells = pbuildTree->buildTree(*pbodies, *pbuffer, *pbounds);
+	pupDownPass->upwardPass(*pcells);
+	ptraversal->initListCount(*pcells);
+	ptraversal->initWeight(*pcells);
+	ptraversal->traverse(*pcells, *pcells, cycle, args.dual, args.mutual);
+	pupDownPass->downwardPass(*pcells);
+	ptraversal->writeList(*pcells,0);
+	moved=0;
+
+	for (unsigned int i = 0; i < molecules.size(); i++)
+	{
+	    for (unsigned int j = 0; j < box.dimension; j++)
+	    {
+		(*pparticles)[i].X[j] = molecules[i].position[j];
+	    }
+	    for(Molecule::atom_iter a=molecules[i].atoms.begin();
+		a < molecules[i].atoms.end();
+		a++)
+	    {
+		energy += ((*pbodies)[atomIndex].TRG[0] * (*pbodies)[atomIndex].SRC);
+		atomIndex++; 
+	    }
+	}
+
+	initTargets(pvbodies);
+        *pvbounds = pvboundBox->getBounds(*pvbodies);
+	*pvcells = pbuildTree->buildTree(*pvbodies, *pbuffer, *pvbounds);
+	VDW->evaluate(*pvcells,*pvcells);
+	atomIndex = 0;
+	for (unsigned int i = 0; i < molecules.size(); i++)
+	{
+	    for (unsigned int j = 0; j < box.dimension; j++)
+	    {
+		(*pparticles)[i].X[j] = molecules[i].position[j];
+	    }
+	    for(Molecule::atom_iter a=molecules[i].atoms.begin();
+		a < molecules[i].atoms.end();
+		a++)
+	    {
+		energy += (*pvbodies)[atomIndex].TRG[0];
+		atomIndex++; 
+	    }
+	}
+	
+	energy = energy * c_ftov;
+
+	if (energy!=energy) {
+	    std::cout << particle << " produced: " << energy << std::endl;
+	}
+    }    
+    double nonPair;
+    nonPair = this->nonPairwiseCallback(particle,position,orientation);  
+    energy += nonPair;
+    //std::cout << " energy " << std::setprecision(16) << energy << std::endl;
+    return energy;
 }
 
 double MMolecule::computePairEnergy(unsigned int particle1,
@@ -123,6 +295,7 @@ double MMolecule::computePairEnergy(unsigned int particle1,
 				    double position2[],
 				    double orientation2[])
 {
+    // the intention is to only include particles that are very close here
     // Separation vector.
     std::vector<double> sep(box.dimension);
 
@@ -139,80 +312,51 @@ double MMolecule::computePairEnergy(unsigned int particle1,
     for (unsigned int i=0;i<box.dimension;i++)
         normSqd += sep[i]*sep[i];
 
-    // Particles interact.
+    // Particles interact.	
     if (normSqd < squaredCutOffDistance)
     {
-        double r2Inv = 1.0 / normSqd;
-        double r6Inv = r2Inv*r2Inv*r2Inv;
-        return 4.0*interactionEnergy*((r6Inv*r6Inv) - r6Inv - potentialShift);
+	double energy = 0.0;
+        
+	for(Molecule::atom_iter MCP1 = molecules[particle1].atoms.begin();
+	    MCP1 < molecules[particle1].atoms.end();
+	    MCP1++) {
+	    for(Molecule::atom_iter MCP2 = molecules[particle2].atoms.begin();
+		MCP2 < molecules[particle2].atoms.end();
+		MCP2++) {
+		std::vector<double> apos1(box.dimension);
+		std::vector<double> apos2(box.dimension);
+		Molecule::rotate2D(MCP1->position, apos1, orientation1[0]);
+		Molecule::rotate2D(MCP2->position, apos2, orientation2[0]);
+		for (unsigned int i=0;i<box.dimension;i++)	    
+		{
+		    apos1[i] += position1[i];
+		    apos2[i] += position2[i];
+		    sep[i] = apos1[i] - apos2[i];
+		}
+
+		double normSqd = 0;
+
+		// Calculate squared norm of vector.
+		for (unsigned int i=0;i<box.dimension;i++)
+		    normSqd += sep[i]*sep[i];
+
+		double r2Inv = 1.0 / normSqd;
+		double r6Inv = r2Inv*r2Inv*r2Inv;
+		energy += 4.0*interactionEnergy*((r6Inv*r6Inv) - r6Inv - potentialShift);
+		energy += (MCP1->charge * MCP2->charge) / sqrt(normSqd); //coulomb term
+	    }
+	}
+	return energy;
     }
-    else return 0;
+    return 0;
 }
 
 double MMolecule::nonPairwiseCallback(unsigned int particle,
 				      double position[],
 				      double orientation[])
 {
-  // std::cout << std::setprecision(16) <<position[0] << " " << position[1] << " " << position[2] << std::endl;
-  // std::cout << std::setprecision(16) << (*pbodies)[particle].X[0] << " " << (*pbodies)[particle].X[1]
-  // 	    << " " << (*pbodies)[particle].X[2] << std::endl;
-  // std::cout << "accepted" << accepted << std::endl;
-  FloatingPoint<double> lhs0(position[0]);
-  FloatingPoint<double> rhs0((*pbodies)[particle].X[0]);
-  FloatingPoint<double> lhs1(position[1]);
-  FloatingPoint<double> rhs1((*pbodies)[particle].X[1]);
-  FloatingPoint<double> lhs2(position[2]);
-  FloatingPoint<double> rhs2((*pbodies)[particle].X[2]);
-  
-  if (0) {// ! lhs0.AlmostEquals(rhs0) ||
-      // ! lhs1.AlmostEquals(rhs1) ||
-      // ! lhs2.AlmostEquals(rhs2)) {
-    //std::cout << "clean" << accepted << std::endl;
-	pjbodies->push_back((*pbodies)[particle]);
-	//pjbodies->back().TRG[0] = pjbodies->back().SRC;
-	//pjbodies->back().TRG[1] = pjbodies->back().X[0];
-	//pjbodies->back().TRG[2] = pjbodies->back().X[1];
-	//pjbodies->back().TRG[3] = pjbodies->back().X[2];
-	//std::cout << pjbodies->back().SRC << " " << pjbodies->back().TRG[0] << std::endl;
-	initTargets(pjbodies);
-	*pbounds = pboundBox->getBounds(*pbodies);
-	*pbounds = pboundBox->getBounds(*pjbodies,*pbounds);
-	*pjcells = pbuildTree->buildTree(*pjbodies, *pbuffer, *pbounds);
-	pupDownPass->upwardPass(*pjcells);
-	ptraversal->traverse(*pcells, *pjcells, cycle, args.dual, false);
-	pupDownPass->downwardPass(*pcells);
-	double result = 0;
-	result = (pjbodies->back().TRG[0]) * (pjbodies->back().SRC);
-	//std::cout << result << std::endl;
-	if (result!=result) {
-	  std::cout << particle << " produced: " << result << std::endl;
-	}
-	return result * c_ftov;
-  } else if (1) { //(accepted) {
-    //std::cout << "rebuild main tree" << std::endl;
-        initTargets(pbodies);
-        *pbounds = pboundBox->getBounds(*pbodies);
-	*pcells = pbuildTree->buildTree(*pbodies, *pbuffer, *pbounds);
-	//pjbodies->clear();
-	pupDownPass->upwardPass(*pcells);
-	ptraversal->initListCount(*pcells);
-	ptraversal->initWeight(*pcells);
-	ptraversal->traverse(*pcells, *pcells, cycle, args.dual, args.mutual);
-	pupDownPass->downwardPass(*pcells);
-	ptraversal->writeList(*pcells,0);
-	//ptraversal->normalize(*pbodies);
-	accepted=0;
-	double result = 0;
-	result = ((*pbodies)[particle].TRG[0] * (*pbodies)[particle].SRC);
-	if (result!=result) {
-	  std::cout << particle << " produced: " << result << std::endl;
-	}
-	return result * c_ftov;
-    } else {
-    return ((*pbodies)[particle].TRG[0] * (*pbodies)[particle].SRC) * c_ftov;
-	std::cout << "unexpected non-pairwise result" << std::endl;
-    }
-    
+  //this is where the surface potential will go
+  return 0.0;
 }
 
 void MMolecule::initTargets(Bodies * ptbodies) {
@@ -230,6 +374,19 @@ void MMolecule::applyPostMoveUpdates(unsigned int particle, double position[], d
   {
       (*pbodies)[particle].X[i] = particles[particle].position[i];
   }
-  accepted=1;
+  moved=1;
 }
-  
+
+double MMolecule::getEnergy()
+{
+    double energy = 0;
+
+    for (unsigned int i=0;i<molecules.size();i++)
+    {
+        energy += computeEnergy(i, &molecules[i].position[0], &molecules[i].orientation[0]);
+	//std::cout << std::setprecision(12) << energy << std::endl;
+    }
+    std::cout << std::setprecision(12) << energy/(2*molecules.size()) << std::endl;
+    return energy/(2*molecules.size());
+}
+

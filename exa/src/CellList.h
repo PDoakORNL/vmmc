@@ -22,6 +22,9 @@
 
 #include "Box.h"
 #include "Particle.h"
+#include "Particles.h"
+#include "molecule.h"
+#include "Molecules.h"
 
 #ifndef M_PI
     #define M_PI 3.1415926535897932384626433832795
@@ -111,8 +114,10 @@ public:
     //! Initialise cell list for all particles.
     /*! \param particles Reference to a vector of particles.
      */
-    void initCellList(std::vector<Particle>&);
+    void initCellList(Particles&);
 
+    void initCellList(Molecules&);
+    
     //! Update cell list for an individual particle.
     /*! \param newCell
             The index of the cell in which the particle is located.
@@ -123,7 +128,7 @@ public:
         \param particles
             Reference to a vector of particles.
      */
-    void updateCell(int, Particle&, std::vector<Particle>&);
+    void updateCell(int, Particle&, Particles&);
 
     //! Set the dimensionality of the cell list.
     /*! \param dimension_

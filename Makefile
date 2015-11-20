@@ -35,7 +35,7 @@ SHELL := bash
 project := vmmc
 
 # C++ compiler.
-CXX := g++
+CXX := g++-5
 
 # Installation path.
 PREFIX := $(HOME)/local
@@ -89,7 +89,7 @@ iflags_exec := -m 0755
 # Install flags for non-executable files.
 iflags := -m 0644
 
-outside_includes := -I/Users/epd/codes/exafmm/include -I/Users/epd/codes/exafmm/vectorclass -I/usr/local/Cellar//gsl/1.16/include/gsl -DEXAFMM_LAPLACE -DEXAFMM_CARTESIAN -DEXAFMM_EXPANSION=4
+outside_includes := -I/home/epd/codes/exafmm/include -I/home/epd/codes/exafmm/vectorclass -I/home/epd/.linuxbrew/include/gsl -DEXAFMM_LAPLACE -DEXAFMM_CARTESIAN -DEXAFMM_EXPANSION=4
 
 # Git commit information.
 commit := $(shell git describe --abbrev=4 --dirty --always --tags 2> /dev/null)
@@ -136,7 +136,8 @@ exa_headers := $(filter-out $(exa_library_header), $(exa_headers))
 exa_sources := $(wildcard $(exa_dir)/src/*.cpp)
 temp := $(patsubst %.cpp,%.o,$(exa_sources))
 exa_objects := $(subst $(exa_dir)/src,$(exa_obj_dir),$(temp))
-
+ex_exa_libs := /usr/lib/gcc/x86_64-linux-gnu/5/libgomp.so
+exa_cxxflags := -DEXAFMM_WITH_OPENMP -fopenmp
 
 # Source files and executable names for Python demos.
 python_demo_files := $(wildcard $(demo_dir)/python/*.cpp)
@@ -188,10 +189,10 @@ devel: build
 release: CXXFLAGS := $(cxxflags_release)
 release: build
 
-exa: CXXFLAGS := $(cxxflags_devel)
+exa: CXXFLAGS := $(cxxflags_devel) $(exa_cxxflags)
 exa: exab
 
-exa-release: CXXFLAGS := $(cxxflags_release)
+exa-release: CXXFLAGS := $(cxxflags_release) $(exa_cxxflags)
 exa-release: exab
 
 # Print compiler flags.
@@ -325,7 +326,7 @@ $(demos): %: %.cpp $(demo_library_header) $(library) $(demo_library) $(demo_obje
 
 $(exas): %: %.cpp  $(exa_library_header) $(library)  $(exa_library) $(exa_objects)
 	$(call colorecho, 1, "--> Linking CXX executable $@")
-	-$(CXX) $(CXXFLAGS) -Wfatal-errors -I$(exa_dir)/src $@.cpp $(library) $(exa_library) $(LIBS) $(LDFLAGS) -o $@
+	-$(CXX) $(CXXFLAGS) -Wfatal-errors -I$(exa_dir)/src $@.cpp $(library) $(exa_library) $(LIBS) $(ex_exa_libs) $(LDFLAGS) -o $@
 
 
 # Compile C++ Python API demonstration code.

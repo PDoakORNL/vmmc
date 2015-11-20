@@ -33,6 +33,8 @@ extern double INF;
 class Model
 {
 public:
+    //! Constructor necessary because all derived types may not take a vector of Particles
+    Model();
     //! Constructor.
     /*! \param box_
             A reference to the simulation box object.
@@ -52,7 +54,7 @@ public:
         \param interactionRange_
             The square well interaction range (in units of the particle diameter).
      */
-    Model(Box&, std::vector<Particle>&, CellList&, unsigned int, double, double);
+    Model(Box&, Particles&, CellList&, unsigned int, double, double);
 
     //! Calculate the total interaction energy felt by a particle.
     /*! \param index
@@ -143,7 +145,7 @@ public:
     double getEnergy();
 
     Box& box;                           //!< A reference to the simulation box.
-    std::vector<Particle>& particles;   //!< A reference to the particle list.
+    Particles& particles;   //!< A reference to the particle list.
     CellList& cells;                    //!< A reference to the cell list.
 
 protected:

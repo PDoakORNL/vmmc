@@ -1,5 +1,6 @@
 /*
-  Copyright (c) 2015 Lester Hedges <lester.hedges+vmmc@gmail.com>
+  Copyright (c) 2015 Peter Doak <doakpw@ornlg.gov>
+  based on vmmc example code (c) 2015 by Lester Hedges <lester.hedges+vmmc@gmail.com>
 
   This program is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -26,6 +27,9 @@
 #include "up_down_pass.h"
 #include "build_tree.h"
 #include "gsl_const_mksa.h"
+#include "molecule.h"
+#include "Molecules.h"
+#include "van_der_waals.h"
 
 /*! \file MMolecule.h
 */
@@ -37,6 +41,7 @@ using exafmm::BuildTree;
 using exafmm::Cells;
 using exafmm::Traversal;
 using exafmm::UpDownPass;
+using exafmm::VanDerWaals;
 
 //! Class defining the MONC Molecule potential.
 class MMolecule : public Model
@@ -61,9 +66,11 @@ public:
         \param interactionRange_
             The potential cut-off distance.
      */
-    MMolecule(Box&, std::vector<Particle>&, CellList&, unsigned int, double, double, NodeInfo * = NULL);
+    MMolecule(Box&, Molecules&, CellList&, unsigned int, double, double, NodeInfo * = NULL);
 
-  virtual double computeEnergy(unsigned int, double[], double[]);
+   ~MMolecule();
+  
+    double computeEnergy(unsigned int, double[], double[]);
   
     //! Calculate the pair energy between two particles.
     /*! \param particle1
@@ -91,14 +98,16 @@ public:
     double nonPairwiseCallback(unsigned int, double[], double[]);
     
     void applyPostMoveUpdates(unsigned int, double[], double[]);
-
+  
     void updateBodies();
     void initBodies();
-    bool accepted = true;
-    
+    bool moved = true;
+    Molecules& molecules;   //!< A reference to the molecule list.
+    double getEnergy();
+
 private:
     const exafmm::real_t cycle = 2 * M_PI;
-  const exafmm::real_t fmmUnits = pow(double(GSL_CONST_MKSA_ELECTRON_CHARGE),2.0) / GSL_CONST_MKSA_ANGSTROM;
+    const exafmm::real_t fmmUnits = pow(double(GSL_CONST_MKSA_ELECTRON_CHARGE),2.0) / GSL_CONST_MKSA_ANGSTROM;
     const exafmm::real_t temperature = 300;
     const exafmm::real_t vmmcUnits = (GSL_CONST_MKSA_BOLTZMANN) * temperature;
     const exafmm::real_t c_ftov = fmmUnits/vmmcUnits;
@@ -114,16 +123,21 @@ private:
 	int mutual = 0;
 	int useRopt = 0;
 	int nspawn = 5000;
-	int threads = 8;
+	int threads = 1;
 	double theta =.4;
 	int useRmax = 0;
+	int nat = 2;
+	double * prscale = NULL;
+	double * pgscale = NULL;
+	double * pfgscale = NULL;
     } args;
 
     void initTargets(Bodies * ptbodies); 
 
     Bodies *pbodies;
-    Bodies *pbodies2;
-    Bodies *pjbodies;
+    Bodies *pvbodies;
+    Bodies *pparticles;
+  //Bodies *pjbodies;
     Bodies *pbuffer;
     BoundBox *pboundBox;
     Bounds *pbounds;
@@ -132,9 +146,15 @@ private:
     Cells *pjcells;
     Traversal *ptraversal;
     UpDownPass *pupDownPass;
-
-    double potentialShift;  //!< Shift factor to zero potential at cut-off.
-    
+    BoundBox *pvboundBox;
+    Bounds *pvbounds;
+    BuildTree *pvbuildTree;
+    Cells *pvcells;
+    Cells *pvjcells;
+    Traversal *pvtraversal;
+    UpDownPass *pvupDownPass;
+    VanDerWaals * VDW;
+    double potentialShift;  //!< Shift factor to zero potential at cut-off.    
 };
 
 #endif  /* _MMOLECULE_H */

@@ -233,7 +233,7 @@ void CellList::initCell(int newCell, Particle& particle)
     }
 }
 
-void CellList::initCellList(std::vector<Particle>& particles)
+void CellList::initCellList(Particles& particles)
 {
     for (unsigned int i=0;i<particles.size();i++)
     {
@@ -241,7 +241,7 @@ void CellList::initCellList(std::vector<Particle>& particles)
     }
 }
 
-void CellList::updateCell(int newCell, Particle& particle, std::vector<Particle>& particles)
+void CellList::updateCell(int newCell, Particle& particle, Particles& particles)
 {
     // Remove from old list
     at(particle.cell).tally--;

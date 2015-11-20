@@ -18,28 +18,32 @@
 #include "Exa.h"
 #include "VMMC.h"
 #include "MMolecule.hpp"
-
+#include <omp.h>
 
 int main(int argc, char** argv)
 {
     // Simulation parameters.
-    unsigned int dimension = 3;                     // dimension of simulation box
-    unsigned int nAtoms = 300;                 // number of atoms
-    double interactionEnergy = 4;                   // interaction energy scale (in units of kBT)
+    unsigned int dimension = 2;                     // dimension of simulation box
+    unsigned int nMolecules = 300;                 // number of atoms
+    double interactionEnergy = 2;                   // interaction energy scale (in units of kBT)
     double interactionRange = 4.5;                  // size of interaction range (in units of particle diameter)
-    double density = 0.005;                          // particle density
+    double density = 0.05;                          // particle density
     double baseLength;                              // base length of simulation box
     unsigned int maxInteractions = 100;             // maximum number of interactions per particle
+
+    omp_set_num_threads(4);
+    // std::cout << "threads: " << omp_get_num_threads() << " " << args.threads
+    // 	      << std::endl;
     
     // Data structures.
-    std::vector<Particle> atoms(nAtoms);    // particle container
+    std::vector<Molecule> vmolecules;    // Molecule is derived from Particle
     CellList cells;                                 // cell list
     // Resize particle container.
-    atoms.resize(nAtoms);
-
+    vmolecules.resize(nMolecules);
+    Molecules molecules(&vmolecules);
     // Work out base length of simulation box (particle diameter is one).
-    if (dimension == 2) baseLength = std::pow((nAtoms*M_PI)/(2.0*density), 1.0/2.0);
-    else baseLength = std::pow((nAtoms*M_PI)/(6.0*density), 1.0/3.0);
+    if (dimension == 2) baseLength = std::pow((nMolecules*M_PI)/(2.0*density), 1.0/2.0);
+    else baseLength = std::pow((nMolecules*M_PI)/(6.0*density), 1.0/3.0);
 
     std::vector<double> boxSize;
     for (unsigned int i=0;i<dimension;i++)
@@ -59,35 +63,35 @@ int main(int argc, char** argv)
     cells.initialise(box.boxSize, interactionRange);
 
     // Initialise the MMolecule potential model.
-    MMolecule mmolecule(box, atoms, cells,
+    MMolecule mmolecule(box, molecules, cells,
         maxInteractions, interactionEnergy, interactionRange);
     // Initialise random number generator.
     MersenneTwister rng;
 
     // Initialise particle initialisation object.
-    Initialise initialise;
+    InitialiseMolecules initialise;
 
     // Generate a random particle configuration.
-    initialise.random(atoms, cells, box, rng, false);
+    initialise.random(molecules, cells, box, rng, false);
 
     // setup the exafmm bodies in molecule from vmmc particles
     mmolecule.initBodies();
    
     // Initialise data structures needed by the VMMC class.
-    double coordinates[dimension*nAtoms];
-    double orientations[dimension*nAtoms];
-    bool isIsotropic[nAtoms];
+    double coordinates[dimension*nMolecules];
+    double orientations[dimension*nMolecules];
+    bool isIsotropic[nMolecules];
     
     // Copy particle coordinates and orientations into C-style arrays.
-    for (unsigned int i=0;i<nAtoms;i++)
+    for (unsigned int i=0;i<nMolecules;i++)
     {
         for (unsigned int j=0;j<dimension;j++)
         {
-            coordinates[dimension*i + j] = atoms[i].position[j];
-            orientations[dimension*i + j] = atoms[i].orientation[j];
+            coordinates[dimension*i + j] = molecules[i].position[j];
+            orientations[dimension*i + j] = molecules[i].orientation[j];
         }
 
-        isIsotropic[i] = true;
+        isIsotropic[i] = false;
 
     }
 
@@ -95,6 +99,7 @@ int main(int argc, char** argv)
     using namespace std::placeholders;
     vmmc::CallbackFunctions callbacks;
 
+    
     callbacks.energyCallback =
         std::bind(&MMolecule::computeEnergy, &mmolecule, _1, _2, _3);
     callbacks.pairEnergyCallback =
@@ -108,10 +113,10 @@ int main(int argc, char** argv)
 
     // Initialise the VMMC object.
 #ifndef ISOTROPIC
-    vmmc::VMMC vmmc(nAtoms, dimension, coordinates, orientations,
+    vmmc::VMMC vmmc(nMolecules, dimension, coordinates, orientations,
         0.15, 0.2, 0.5, 0.5, maxInteractions, &boxSize[0], isIsotropic, true, callbacks);
 #else
-    vmmc::VMMC vmmc(nAtoms, dimension, coordinates,
+    vmmc::VMMC vmmc(nMolecules, dimension, coordinates,
         0.15, 0.2, 0.5, 0.5, maxInteractions, &boxSize[0], true, callbacks);
 #endif
 
@@ -120,7 +125,7 @@ int main(int argc, char** argv)
     {
         // Increment simulation by 1000 Monte Carlo Sweeps.
         //std::vector<Particle> tempAtoms(atoms);
-        vmmc+= 100 * nAtoms;
+        vmmc+= 100 * nMolecules;
 	// std::vector<Particle>::iterator i_atoms, i_tempAtoms;
 	// i_atoms = atoms.begin();
 	// i_tempAtoms = tempAtoms.begin();
@@ -136,11 +141,11 @@ int main(int argc, char** argv)
 	// }
 	
         // Append particle coordinates to an xyz trajectory.
-        if (i == 0) io.appendXyzTrajectory(dimension, atoms, true);
-        else io.appendXyzTrajectory(dimension, atoms, false);
-
+        if (i == 0) io.appendXyzTrajectory(dimension, molecules, true);
+        else io.appendXyzTrajectory(dimension, molecules, false);
+ 
         // Report.
-        printf("sweeps = %9.4e, energy = %5.4f\n", ((double) (i+1)*1000), mmolecule.getEnergy());
+        printf("sweeps = %9.4e, energy = %10f\n", ((double) (i+1)*100), mmolecule.getEnergy());
 	printf("accepts = %6llu\n", vmmc.getAccepts());
     }
 

@@ -16,12 +16,13 @@
 */
 
 #include "Model.h"
+#include "Particles.h"
 
 double INF = std::numeric_limits<double>::infinity();
 
 Model::Model(
     Box& box_,
-    std::vector<Particle>& particles_,
+    Particles& particles_,
     CellList& cells_,
     unsigned int maxInteractions_,
     double interactionEnergy_,
@@ -55,7 +56,7 @@ double Model::computeEnergy(unsigned int particle, double position[])
     // Check all neighbouring cells including same cell.
     for (unsigned int i=0;i<cells.getNeighbours();i++)
     {
-        cell = cells[particles[particle].cell].neighbours[i];
+	cell = cells[particles[particle].cell].neighbours[i];
 
         // Check all particles within cell.
         for (unsigned int j=0;j<cells[cell].tally;j++)
@@ -68,11 +69,11 @@ double Model::computeEnergy(unsigned int particle, double position[])
                 // Calculate model specific pair energy.
 #ifndef ISOTROPIC
                 energy += computePairEnergy(particle, position, orientation,
-                          neighbour, &particles[neighbour].position[0],
-                          &particles[neighbour].orientation[0]);
+					    neighbour, &particles[neighbour].position[0],
+					    &particles[neighbour].orientation[0]);
 #else
                 energy += computePairEnergy(particle, position,
-                          neighbour, &particles[neighbour].position[0]);
+					    neighbour, &particles[neighbour].position[0]);
 #endif
 
                 // Early exit test for hard core overlaps and large finite energy repulsions.
@@ -109,7 +110,7 @@ unsigned int Model::computeInteractions(unsigned int particle,
     // Check all neighbouring cells including same cell.
     for (unsigned int i=0;i<cells.getNeighbours();i++)
     {
-        cell = cells[particles[particle].cell].neighbours[i];
+	    cell = cells[particles[particle].cell].neighbours[i];
 
         // Check all particles within cell.
         for (unsigned int j=0;j<cells[cell].tally;j++)
@@ -123,7 +124,7 @@ unsigned int Model::computeInteractions(unsigned int particle,
 
                 // Compute separation.
                 for (unsigned int k=0;k<box.dimension;k++)
-                    sep[k] = position[k] - particles[neighbour].position[k];
+			sep[k] = position[k] - particles[neighbour].position[k];
 
                 // Enforce minimum image.
                 box.minimumImage(sep);
@@ -162,9 +163,9 @@ void Model::applyPostMoveUpdates(unsigned int particle, double position[])
     // Copy coordinates/orientations.
     for (unsigned int i=0;i<box.dimension;i++)
     {
-        particles[particle].position[i] = position[i];
+	    particles[particle].position[i] = position[i];
 #ifndef ISOTROPIC
-        particles[particle].orientation[i] = orientation[i];
+	    particles[particle].orientation[i] = orientation[i];
 #endif
     }
 
@@ -173,7 +174,7 @@ void Model::applyPostMoveUpdates(unsigned int particle, double position[])
 
     // Update cell lists if necessary.
     if (particles[particle].cell != newCell)
-        cells.updateCell(newCell, particles[particle], particles);
+	    cells.updateCell(newCell, particles[particle], particles);
 }
 
 double Model::getEnergy()

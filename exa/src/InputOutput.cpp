@@ -20,7 +20,7 @@
 InputOutput::InputOutput() {}
 
 void InputOutput::loadConfiguration(std::string fileName, Box& box,
-    std::vector<Particle>& particles, CellList& cells, bool isIsotropic)
+				    Particles& particles, CellList& cells, bool isIsotropic)
 {
     std::ifstream dataFile;
 
@@ -80,7 +80,7 @@ void InputOutput::loadConfiguration(std::string fileName, Box& box,
 }
 
 void InputOutput::saveConfiguration(std::string fileName, Box& box,
-    std::vector<Particle>& particles, bool isIsotropic)
+    Particles& particles, bool isIsotropic)
 {
     // Create file pointer.
     FILE *pFile = fopen(fileName.c_str(), "w");
@@ -106,7 +106,7 @@ void InputOutput::saveConfiguration(std::string fileName, Box& box,
     fclose(pFile);
 }
 
-void InputOutput::appendXyzTrajectory(unsigned int dimension, const std::vector<Particle>& particles, bool clearFile)
+void InputOutput::appendXyzTrajectory(unsigned int dimension, Particles& particles, bool clearFile)
 {
     FILE* pFile;
 
@@ -123,7 +123,39 @@ void InputOutput::appendXyzTrajectory(unsigned int dimension, const std::vector<
     for (unsigned int i=0;i<particles.size();i++)
     {
         fprintf(pFile, "0 %5.4f %5.4f %5.4f\n",
-            particles[i].position[0], particles[i].position[1], (dimension == 3) ? particles[i].position[2] : 0);
+            particles[i].position[0], particles[i].position[1], (dimension == 3) ? particles[i].position[2] : 0.00d);
+    }
+
+    fclose(pFile);
+}
+
+void InputOutput::appendXyzTrajectory(unsigned int dimension, Molecules& molecules, bool clearFile)
+{
+    FILE* pFile;
+
+    // Wipe existing trajectory file.
+    if (clearFile)
+    {
+        pFile = fopen("trajectory.xyz", "w");
+        fclose(pFile);
+    }
+
+    pFile = fopen("trajectory.xyz", "a");
+    long unsigned int numAtoms = molecules.size()*molecules[0].atoms.size();
+    fprintf(pFile, "%lu\n\n", numAtoms);
+    std::vector<double> apos(dimension);
+    for (unsigned int i=0;i<molecules.size();i++)
+    {
+
+	
+	for(Molecule::atom_iter a=molecules[i].atoms.begin();
+	    a < molecules[i].atoms.end();
+	    a++)
+	{
+	    molecules[i].get_apos(*a, apos);
+	    fprintf(pFile, "%3d %5.4f %5.4f %5.4f\n",
+		    a->element, apos[0], apos[1], (dimension == 3) ? apos[2] : 0.0);
+	}
     }
 
     fclose(pFile);

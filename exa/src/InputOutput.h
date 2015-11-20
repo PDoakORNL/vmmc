@@ -23,6 +23,8 @@
 #include <string>
 
 #include "CellList.h"
+#include "Particles.h"
+#include "Molecules.h"
 
 /*! \file InputOutput.h
     \brief A class for reading/writing data.
@@ -50,7 +52,7 @@ public:
         \param isIsotropic
             Whether the potential is isotropic (no orientation data).
      */
-    void loadConfiguration(std::string, Box&, std::vector<Particle>&, CellList&, bool);
+    void loadConfiguration(std::string, Box&, Particles&, CellList&, bool);
 
     //! Save a restart configuration to a plain text file.
     /*! \param fileName
@@ -65,7 +67,7 @@ public:
         \param isIsotropic
             Whether the potential is isotropic (no orientation data).
      */
-    void saveConfiguration(std::string, Box&, std::vector<Particle>&, bool);
+    void saveConfiguration(std::string, Box&, Particles&, bool);
 
     //! Append a particle configuration to an existing xyz trajectory.
     /*! \param dimension
@@ -77,7 +79,9 @@ public:
         \param clearFile
             Whether to clear the trajectory file before writing.
      */
-    void appendXyzTrajectory(unsigned int, const std::vector<Particle>&, bool);
+    void appendXyzTrajectory(unsigned int, Particles&, bool);
+
+    void appendXyzTrajectory(unsigned int, Molecules&, bool);
 
     //! Create a VMD TcL script to set the particle view and draw a bounding box.
     /*! \param boxSize
