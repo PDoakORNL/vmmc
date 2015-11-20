@@ -142,7 +142,8 @@ void InputOutput::appendXyzTrajectory(unsigned int dimension, Molecules& molecul
 
     pFile = fopen("trajectory.xyz", "a");
     long unsigned int numAtoms = molecules.size()*molecules[0].atoms.size();
-    fprintf(pFile, "%lu\n\n", numAtoms);
+    fprintf(pFile, "%lu\n", numAtoms);
+    fprintf(pFile, "%12.10f \n", molecules.energy);
     std::vector<double> apos(dimension);
     for (unsigned int i=0;i<molecules.size();i++)
     {
@@ -180,15 +181,18 @@ void InputOutput::vmdScript(const std::vector<double>& boxSize)
     // Set orthographic projection.
     fprintf(pFile, "display projection orthographic\n");
 
-    // Set drawing method to van der Waals radius.
-    fprintf(pFile, "mol modstyle 0 0 VDW 1 30\n");
+    // Set drawing method to dynamic bonds
+    fprintf(pFile, "mol delrep 0 top\n");
+    fprintf(pFile, "mol representation DynamicBonds 1.400000 0.300000 12.000000\n");
+	    fprintf(pFile, "mol addrep top\n");
+    //"mol modstyle 0 0 VDW 1 30\n");
 
     // Set sensible atom radius.
-    fprintf(pFile, "set sel [atomselect top \"name X\"]\n");
-    fprintf(pFile, "atomselect0 set radius 0.4\n");
+    // fprintf(pFile, "set sel [atomselect top \"name X\"]\n");
+    // fprintf(pFile, "atomselect0 set radius 0.2\n");
 
-    // Set default particle to blue.
-    fprintf(pFile, "color Name X blue\n");
+    // // Set default particle to blue.
+    // fprintf(pFile, "color Name X blue\n");
 
     // Turn off depth cue.
     fprintf(pFile, "display depthcue off\n");

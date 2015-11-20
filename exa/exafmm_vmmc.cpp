@@ -27,7 +27,7 @@ int main(int argc, char** argv)
     unsigned int nMolecules = 300;                 // number of atoms
     double interactionEnergy = 4;                   // interaction energy scale (in units of kBT)
     double interactionRange = 4.5;                  // size of interaction range (in units of particle diameter)
-    double density = 0.1;                          // particle density
+    double density = 0.25;                          // particle density
     double particleDiameter = 2.0;                  // internal units are particle diameter based but how big is the particle really?
     double baseLength;                              // base length of simulation box
     unsigned int maxInteractions = 100;             // maximum number of interactions per particle
@@ -143,12 +143,15 @@ int main(int argc, char** argv)
 	// }
 	
         // Append particle coordinates to an xyz trajectory.
+	molecules.energy = mmolecule.getEnergy();
+	printf("sweeps = %9.4e, energy = %10f\n", ((double) (i+1)*100), molecules.energy);
+	printf("accepts = %6llu\n", vmmc.getAccepts());
+
+	
         if (i == 0) io.appendXyzTrajectory(dimension, molecules, true);
         else io.appendXyzTrajectory(dimension, molecules, false);
  
         // Report.
-        printf("sweeps = %9.4e, energy = %10f\n", ((double) (i+1)*100), mmolecule.getEnergy());
-	printf("accepts = %6llu\n", vmmc.getAccepts());
     }
 
     std::cout << "\nComplete!\n";

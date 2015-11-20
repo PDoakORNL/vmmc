@@ -37,6 +37,7 @@ using exafmm::BuildTree;
 using exafmm::Cells;
 using exafmm::Traversal;
 using exafmm::UpDownPass;
+using exafmm::vec3;
 
 MMolecule::MMolecule(
     Box& box_,
@@ -236,6 +237,11 @@ double MMolecule::computeEnergy(unsigned int particle, double position[], double
 	ptraversal->traverse(*pcells, *pcells, cycle, args.dual, args.mutual);
 	pupDownPass->downwardPass(*pcells);
 	ptraversal->writeList(*pcells,0);
+	vec3 dipole = pupDownPass->getDipole(*pbodies,0);
+	// vec3 localDipole = upDownPass.getDipole(bodies,0);
+	// vec3 globalDipole = baseMPI.allreduceVec3(localDipole);
+	pupDownPass->dipoleCorrection(*pbodies,dipole,(*pbodies).size(), cycle);
+
 	moved=0;
 
 	for (unsigned int i = 0; i < molecules.size(); i++)
@@ -255,7 +261,7 @@ double MMolecule::computeEnergy(unsigned int particle, double position[], double
 
 	initTargets(pvbodies);
         *pvbounds = pvboundBox->getBounds(*pvbodies);
-	*pvcells = pbuildTree->buildTree(*pvbodies, *pbuffer, *pvbounds);
+	*pvcells = pvbuildTree->buildTree(*pvbodies, *pbuffer, *pvbounds);
 	VDW->evaluate(*pvcells,*pvcells);
 	atomIndex = 0;
 	for (unsigned int i = 0; i < molecules.size(); i++)

@@ -18,6 +18,7 @@ public:
     
     std::vector<Molecule> * vpMolecules;
     double particleDiameter;
+    double energy;
 };
 
 #endif /* _MOLECULES_H */

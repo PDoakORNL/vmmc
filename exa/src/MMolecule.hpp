@@ -120,7 +120,7 @@ private:
 	int getMatrix = 0;
 	int images = 2;
 	int verbose = 0;
-	int mutual = 0;
+	int mutual = 1;
 	int useRopt = 0;
 	int nspawn = 5000;
 	int threads = 8;
