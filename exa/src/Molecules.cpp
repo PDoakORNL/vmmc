@@ -3,7 +3,7 @@
 Molecules::Molecules() {
 }
 
-Molecules::Molecules(std::vector<Molecule> * molecules_) : vpMolecules(molecules_)
+Molecules::Molecules(std::vector<Molecule> * molecules_, double particleDiameter_) : vpMolecules(molecules_), particleDiameter(particleDiameter_)
 {
 }
 

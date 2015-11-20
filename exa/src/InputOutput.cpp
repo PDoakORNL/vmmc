@@ -152,7 +152,7 @@ void InputOutput::appendXyzTrajectory(unsigned int dimension, Molecules& molecul
 	    a < molecules[i].atoms.end();
 	    a++)
 	{
-	    molecules[i].get_apos(*a, apos);
+	    molecules[i].get_apos(*a, molecules.particleDiameter, apos);
 	    fprintf(pFile, "%3d %5.4f %5.4f %5.4f\n",
 		    a->element, apos[0], apos[1], (dimension == 3) ? apos[2] : 0.0);
 	}

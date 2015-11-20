@@ -12,11 +12,12 @@ public:
     //! Default constructor.
     Molecules();
     virtual ~Molecules();
-    Molecules(std::vector<Molecule> * vpMolecules);
+    Molecules(std::vector<Molecule> * vpMolecules, double);
     virtual Molecule& operator[](unsigned int);
     virtual long unsigned int size();
     
     std::vector<Molecule> * vpMolecules;
+    double particleDiameter;
 };
 
 #endif /* _MOLECULES_H */

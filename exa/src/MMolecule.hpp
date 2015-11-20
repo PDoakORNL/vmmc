@@ -66,7 +66,7 @@ public:
         \param interactionRange_
             The potential cut-off distance.
      */
-    MMolecule(Box&, Molecules&, CellList&, unsigned int, double, double, NodeInfo * = NULL);
+    MMolecule(Box&, Molecules&, CellList&, double, unsigned int, double, double, NodeInfo * = NULL);
 
    ~MMolecule();
   
@@ -118,12 +118,12 @@ private:
 	int full = 0;
 	int graft = 0;
 	int getMatrix = 0;
-	int images = 0;
+	int images = 2;
 	int verbose = 0;
 	int mutual = 0;
 	int useRopt = 0;
 	int nspawn = 5000;
-	int threads = 1;
+	int threads = 8;
 	double theta =.4;
 	int useRmax = 0;
 	int nat = 2;
@@ -154,7 +154,8 @@ private:
     Traversal *pvtraversal;
     UpDownPass *pvupDownPass;
     VanDerWaals * VDW;
-    double potentialShift;  //!< Shift factor to zero potential at cut-off.    
+    double potentialShift;  //!< Shift factor to zero potential at cut-off.
+    double particleDiameter;
 };
 
 #endif  /* _MMOLECULE_H */

@@ -42,10 +42,11 @@ MMolecule::MMolecule(
     Box& box_,
     Molecules& molecules_,
     CellList& cells_,
+    double particleDiameter_,
     unsigned int maxInteractions_,
     double interactionEnergy_,
     double interactionRange_,
-    NodeInfo * nodeinfo_) : Model(box_, (Particles&) molecules_, cells_ , maxInteractions_, interactionEnergy_, interactionRange_), molecules(molecules_)
+    NodeInfo * nodeinfo_) : Model(box_, (Particles&) molecules_, cells_ , maxInteractions_, interactionEnergy_, interactionRange_), molecules(molecules_),particleDiameter(particleDiameter_)
 {
     if(nodeinfo_ != NULL) {
         args.threads = nodeinfo_->threads;
@@ -65,7 +66,6 @@ MMolecule::MMolecule(
     pjcells = new Cells;
     ptraversal = new Traversal(args.nspawn, args.images);
     pupDownPass = new UpDownPass(args.theta, args.useRmax, args.useRopt);
-
     pvboundBox = new BoundBox(args.nspawn);
     pvbounds = new Bounds;
     pvbuildTree = new BuildTree(args.ncrit, args.nspawn);
@@ -73,8 +73,6 @@ MMolecule::MMolecule(
     pvjcells = new Cells;
     pvtraversal = new Traversal(args.nspawn, args.images);
     pvupDownPass = new UpDownPass(args.theta, args.useRmax, args.useRopt);
-
-
     
     exafmm::kernel::eps2 = 0.0;
     exafmm::kernel::setup();
@@ -134,7 +132,7 @@ void MMolecule::initBodies()
 	    a < molecules[i].atoms.end();
 	    a++)
 	{
-	    molecules[i].get_apos(*a, apos);
+	    molecules[i].get_apos(*a, molecules.particleDiameter, apos);
 	    (*pbodies)[bc].SRC = a->charge;
 	    for (unsigned int j = 0; j < 3; j++) {
 		if (j < box.dimension) {
@@ -163,7 +161,7 @@ void MMolecule::updateBodies()
 	    a < molecules[i].atoms.end();
 	    a++)
 	{
-	    molecules[i].get_apos(*a, apos);
+	    molecules[i].get_apos(*a, molecules.particleDiameter, apos);
 	    for (unsigned int j = 0; j < 3; j++) {
 		if (j < box.dimension) {
 		    (*pbodies)[bc].X[j] = apos[j];
@@ -329,11 +327,12 @@ double MMolecule::computePairEnergy(unsigned int particle1,
 		Molecule::rotate2D(MCP2->position, apos2, orientation2[0]);
 		for (unsigned int i=0;i<box.dimension;i++)	    
 		{
-		    apos1[i] += position1[i];
-		    apos2[i] += position2[i];
+		    apos1[i] += position1[i] * molecules.particleDiameter;
+		    apos2[i] += position2[i] * molecules.particleDiameter;
 		    sep[i] = apos1[i] - apos2[i];
 		}
 
+		
 		double normSqd = 0;
 
 		// Calculate squared norm of vector.

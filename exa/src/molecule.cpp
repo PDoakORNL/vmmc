@@ -48,12 +48,12 @@ void Molecule::rotate3D(std::vector<double>& v1, std::vector<double>& v2, std::v
         v3[2] = ((v1[2] - v2[2]*v1Dotv2))*(c - 1) + (v2[1]*v1[0] - v2[0]*v1[1])*s;
     }
 
-void Molecule::get_apos(Atom& atom, std::vector<double>& apos)
+void Molecule::get_apos(Atom& atom, double particleDiameter, std::vector<double>& apos)
 {
 	assert(position.size()==apos.size());
 	Molecule::rotate2D(atom.position, apos, orientation[0]);
 	for (unsigned int i=0;i<position.size();i++)	    
 	{
-	    apos[i] += position[i];
+	    apos[i] += position[i]*particleDiameter;
 	}
 }

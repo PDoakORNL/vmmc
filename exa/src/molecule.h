@@ -56,7 +56,7 @@ public:
 
     static void rotate2D(const std::vector<double>&, std::vector<double>&, double);
     static void rotate3D(std::vector<double>&, std::vector<double>&, std::vector<double>&, double);
-    void get_apos(Atom&, std::vector<double>&);
+    void get_apos(Atom&, double, std::vector<double>&);
 
 };
 

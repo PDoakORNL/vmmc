@@ -25,9 +25,10 @@ int main(int argc, char** argv)
     // Simulation parameters.
     unsigned int dimension = 2;                     // dimension of simulation box
     unsigned int nMolecules = 300;                 // number of atoms
-    double interactionEnergy = 2;                   // interaction energy scale (in units of kBT)
+    double interactionEnergy = 4;                   // interaction energy scale (in units of kBT)
     double interactionRange = 4.5;                  // size of interaction range (in units of particle diameter)
-    double density = 0.05;                          // particle density
+    double density = 0.1;                          // particle density
+    double particleDiameter = 2.0;                  // internal units are particle diameter based but how big is the particle really?
     double baseLength;                              // base length of simulation box
     unsigned int maxInteractions = 100;             // maximum number of interactions per particle
 
@@ -40,7 +41,7 @@ int main(int argc, char** argv)
     CellList cells;                                 // cell list
     // Resize particle container.
     vmolecules.resize(nMolecules);
-    Molecules molecules(&vmolecules);
+    Molecules molecules(&vmolecules, particleDiameter);
     // Work out base length of simulation box (particle diameter is one).
     if (dimension == 2) baseLength = std::pow((nMolecules*M_PI)/(2.0*density), 1.0/2.0);
     else baseLength = std::pow((nMolecules*M_PI)/(6.0*density), 1.0/3.0);
@@ -64,7 +65,7 @@ int main(int argc, char** argv)
 
     // Initialise the MMolecule potential model.
     MMolecule mmolecule(box, molecules, cells,
-        maxInteractions, interactionEnergy, interactionRange);
+			particleDiameter,maxInteractions, interactionEnergy, interactionRange);
     // Initialise random number generator.
     MersenneTwister rng;
 
@@ -72,6 +73,7 @@ int main(int argc, char** argv)
     InitialiseMolecules initialise;
 
     // Generate a random particle configuration.
+    //initialise.addMolecule("TTF",ttf.position,
     initialise.random(molecules, cells, box, rng, false);
 
     // setup the exafmm bodies in molecule from vmmc particles
@@ -114,10 +116,10 @@ int main(int argc, char** argv)
     // Initialise the VMMC object.
 #ifndef ISOTROPIC
     vmmc::VMMC vmmc(nMolecules, dimension, coordinates, orientations,
-        0.15, 0.2, 0.5, 0.5, maxInteractions, &boxSize[0], isIsotropic, true, callbacks);
+        0.15, 0.2, 0.5, particleDiameter/2, maxInteractions, &boxSize[0], isIsotropic, true, callbacks);
 #else
     vmmc::VMMC vmmc(nMolecules, dimension, coordinates,
-        0.15, 0.2, 0.5, 0.5, maxInteractions, &boxSize[0], true, callbacks);
+        0.15, 0.2, 0.5, particleDiameter/2, maxInteractions, &boxSize[0], true, callbacks);
 #endif
 
     // Execute the simulation.
